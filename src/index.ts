@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 import express from "express";
 import mongoose from "mongoose";
 import userRoutes from "./routes/userRoutes";
+import { seedInitialProducts } from "./services/productService";
+import productRoutes from "./routes/productRoutes";
 
 dotenv.config();
 
@@ -20,6 +22,9 @@ mongoose
 	});
 
 app.use("/user", userRoutes);
+app.use("/product", productRoutes);
+
+seedInitialProducts();
 
 app.listen(PORT, () => {
 	console.log(`Server is running on port ${PORT}`);
