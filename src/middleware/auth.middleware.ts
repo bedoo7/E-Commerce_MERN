@@ -17,7 +17,7 @@ export const authenticate = (
 
 		const token = authHeader.split(" ")[1];
 
-		const decoded = jwt.verify(token, process.env.JWT_SECRET || "asdasdaxdsxc"); //{ id: "...", role: "user", iat: 1783287344, exp: 1783290944 }
+		const decoded = jwt.verify(token, process.env.JWT_SECRET || ""); //{ id: "...", role: "user", iat: 1783287344, exp: 1783290944 }
 
 		(req as any).user = decoded; // الاي دي ده بقي هناخده عشان نعمل بيه سيرش ف فانكشين الجيت مي ونجيب باقي الداتا بتاعت اليوزر ونرجعها  من السيرفر
 

@@ -4,16 +4,17 @@ import mongoose from "mongoose";
 import userRoutes from "./routes/userRoutes";
 import { seedInitialProducts } from "./services/productService";
 import productRoutes from "./routes/productRoutes";
+import cartRoutes from "./routes/cartRoutes";
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || "";
 
 app.use(express.json());
 
 mongoose
-	.connect("mongodb://localhost:27017/e-commerce")
+	.connect(process.env.DATABASE_URL || "")
 	.then(() => {
 		console.log("Connected to MongoDB");
 	})
@@ -23,6 +24,7 @@ mongoose
 
 app.use("/user", userRoutes);
 app.use("/product", productRoutes);
+app.use("/cart", cartRoutes);
 
 seedInitialProducts();
 

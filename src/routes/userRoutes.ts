@@ -39,15 +39,23 @@ router.post("/login", async (req, res) => {
 
 //to test the authentication and authorization middleware
 router.get("/profile", authenticate, (req, res) => {
-	res.json({
-		message: "Welcome you are authenticated",
-	});
+	try {
+		res.json({
+			message: "Welcome you are authenticated",
+		});
+	} catch (error: any) {
+		res.status(400).json({ message: error.message });
+	}
 });
 
 router.get("/admin", authenticate, authorize("admin"), (req, res) => {
-	res.json({
-		message: "Welcome Admin you are authenticated and authorized",
-	});
+	try {
+		res.json({
+			message: "Welcome Admin you are authenticated and authorized",
+		});
+	} catch (error: any) {
+		res.status(400).json({ message: error.message });
+	}
 });
 
 router.get("/getmebytoken", authenticate, async (req, res) => {

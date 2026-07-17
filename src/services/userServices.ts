@@ -17,22 +17,31 @@ export const registerUser = async ({
 	password,
 	role,
 }: RegisterParams) => {
-	const existingUser = await userModel.findOne({ email });
-	if (existingUser) {
-		throw new Error("User with this email already exists");
+	try {
+		const existingUser = await userModel.findOne({ email });
+		if (existingUser) {
+			throw new Error("User with this email already exists");
+		}
+
+		const hashedPassword = await bcrypt.hash(password, 10);
+
+		const user = await userModel.create({
+			firstName,
+			lastName,
+			email,
+			password: hashedPassword,
+			role: role || "user",
+		});
+
+		// نجيب اليوزر تاني من غير الباسورد
+		const userWithoutPassword = await userModel
+			.findById(user._id)
+			.select("-password");
+
+		return userWithoutPassword;
+	} catch (error: any) {
+		throw new Error(error.message);
 	}
-
-	const hashedPassword = await bcrypt.hash(password, 10);
-
-	const user = await userModel.create({
-		firstName,
-		lastName,
-		email,
-		password: hashedPassword,
-		role: role || "user",
-	});
-
-	return user;
 };
 
 interface LoginParams {
@@ -41,46 +50,65 @@ interface LoginParams {
 }
 
 export const loginUser = async ({ email, password }: LoginParams) => {
-	const existingUser = await userModel.findOne({ email });
-	if (!existingUser) {
-		throw new Error("Invalid email or password");
+	try {
+		const existingUser = await userModel.findOne({ email });
+		if (!existingUser) {
+			throw new Error("Invalid email or password");
+		}
+
+		const isPasswordValid = await bcrypt.compare(
+			password,
+			existingUser.password,
+		);
+		if (!isPasswordValid) {
+			throw new Error("Invalid email or password");
+		}
+
+		const token = jwt.sign(
+			{ id: existingUser._id, role: existingUser.role },
+			process.env.JWT_SECRET || "",
+			{ expiresIn: "1h" },
+		);
+
+		const userWithoutPassword = await userModel
+			.findById(existingUser._id)
+			.select("-password");
+
+		// return existingUser;
+
+		return { message: "Login successful", user: userWithoutPassword, token };
+	} catch (error: any) {
+		throw new Error(error.message);
 	}
-
-	const isPasswordValid = await bcrypt.compare(password, existingUser.password);
-	if (!isPasswordValid) {
-		throw new Error("Invalid email or password");
-	}
-
-	const token = jwt.sign(
-		{ id: existingUser._id, role: existingUser.role },
-		process.env.JWT_SECRET || "asdasdaxdsxc",
-		{ expiresIn: "1h" },
-	);
-
-	// return existingUser;
-
-	return { message: "Login successful", user: existingUser, token };
 };
 
 // Get the authenticated user's profile
 export const getmebytoken = async (req: any, res: any) => {
-	const id = req.user.id;
-	const user = await userModel.findById(id).select("-password"); // Exclude the password field
+	try {
+		const id = req.user.id;
+		const user = await userModel.findById(id).select("-password"); // Exclude the password field
 
-	if (!user) {
-		return res.status(404).json({ message: "User not found" });
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
+		res.status(200).json(user);
+
+		return user;
+	} catch (error: any) {
+		throw new Error(error.message);
 	}
-
-	res.status(200).json(user);
-
-	return user;
 };
 
 //Get All Users
 export const getAllUsers = async () => {
-	const users = await userModel.find().select("-password"); // Exclude the password field
-	return {
-		users,
-		count: users.length,
-	};
+	try {
+		const users = await userModel.find().select("-password"); // Exclude the password field
+		return {
+			users,
+			count: users.length,
+		};
+	} catch (error: any) {
+		throw new Error(error.message);
+	}
 };
