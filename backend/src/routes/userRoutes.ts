@@ -58,22 +58,27 @@ router.get("/admin", authenticate, authorize("admin"), (req, res) => {
 	}
 });
 
-router.get("/getmebytoken", authenticate, async (req, res) => {
+router.get("/getmebytoken", authenticate, async (req: any, res) => {
 	try {
-		const user = await getmebytoken(req, res);
+		const user = await getmebytoken(req.user.id);
 		res.status(200).json(user);
 	} catch (error: any) {
 		res.status(400).json({ message: error.message });
 	}
 });
 
-router.get("/getAllUsers", authenticate, async (req, res) => {
-	try {
-		const users = await getAllUsers();
-		res.status(200).json(users);
-	} catch (error: any) {
-		res.status(400).json({ message: error.message });
-	}
-});
+router.get(
+	"/getAllUsers",
+	authenticate,
+	authorize("admin"),
+	async (req, res) => {
+		try {
+			const usersData = await getAllUsers(req.query);
+			res.status(200).json(usersData);
+		} catch (error: any) {
+			res.status(400).json({ message: error.message });
+		}
+	},
+);
 
 export default router;

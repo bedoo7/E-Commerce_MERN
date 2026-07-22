@@ -25,4 +25,7 @@ const productSchema = new Schema<IProduct>(
 	},
 );
 
+productSchema.index({ category: 1, brand: 1, price: 1 });
+productSchema.index({ name: "text", description: "text", brand: "text" });
+
 export const productModel = mongoose.model<IProduct>("Product", productSchema);

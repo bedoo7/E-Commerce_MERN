@@ -1,6 +1,20 @@
-import { userModel } from "../models/userModel";
+import { userModel, IUser } from "../models/userModel";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import {
+	buildPaginatedResponse,
+	parsePaginationParams,
+	PaginatedResponse,
+} from "../utils/pagination";
+
+export interface UserQueryParams {
+	page?: string | number;
+	limit?: string | number;
+	search?: string;
+	role?: string;
+	sortBy?: string;
+	sortOrder?: string;
+}
 
 interface RegisterParams {
 	firstName: string;
@@ -83,16 +97,13 @@ export const loginUser = async ({ email, password }: LoginParams) => {
 };
 
 // Get the authenticated user's profile
-export const getmebytoken = async (req: any, res: any) => {
+export const getmebytoken = async (userId: string) => {
 	try {
-		const id = req.user.id;
-		const user = await userModel.findById(id).select("-password"); // Exclude the password field
+		const user = await userModel.findById(userId).select("-password");
 
 		if (!user) {
-			return res.status(404).json({ message: "User not found" });
+			throw new Error("User not found");
 		}
-
-		res.status(200).json(user);
 
 		return user;
 	} catch (error: any) {
@@ -100,13 +111,60 @@ export const getmebytoken = async (req: any, res: any) => {
 	}
 };
 
-//Get All Users
-export const getAllUsers = async () => {
+//Get All Users with Pagination, Search, Filter, Sort
+export const getAllUsers = async (
+	queryParams: UserQueryParams = {},
+): Promise<PaginatedResponse<IUser> & { users: IUser[]; count: number }> => {
 	try {
-		const users = await userModel.find().select("-password"); // Exclude the password field
+		const { page, limit, skip, sortBy, sortOrder } =
+			parsePaginationParams(queryParams);
+
+		const filter: Record<string, any> = {};
+
+		if (queryParams.search && queryParams.search.trim()) {
+			const searchRegex = new RegExp(queryParams.search.trim(), "i");
+			filter.$or = [
+				{ firstName: searchRegex },
+				{ lastName: searchRegex },
+				{ email: searchRegex },
+			];
+		}
+
+		if (queryParams.role && ["user", "admin"].includes(queryParams.role)) {
+			filter.role = queryParams.role;
+		}
+
+		const allowedSortFields = [
+			"createdAt",
+			"firstName",
+			"lastName",
+			"email",
+			"role",
+		];
+		const sortField = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
+
+		const [users, totalItems] = await Promise.all([
+			userModel
+				.find(filter)
+				.select("-password")
+				.sort({ [sortField]: sortOrder })
+				.skip(skip)
+				.limit(limit)
+				.lean(),
+			userModel.countDocuments(filter),
+		]);
+
+		const paginated = buildPaginatedResponse(
+			users as IUser[],
+			totalItems,
+			page,
+			limit,
+		);
+
 		return {
-			users,
-			count: users.length,
+			...paginated,
+			users: paginated.data,
+			count: totalItems,
 		};
 	} catch (error: any) {
 		throw new Error(error.message);

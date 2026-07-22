@@ -1,4 +1,4 @@
-import { cartModel } from "../models/cartModel";
+import { cartModel, ICartItem } from "../models/cartModel";
 import { IOrderItem, orderModel } from "../models/orderModel";
 import { productModel } from "../models/productModel";
 
@@ -23,7 +23,9 @@ export const getActiveCartForUser = async ({
 	userId,
 }: GetActiveCartForUser) => {
 	try {
-		const activeCart = await cartModel.findOne({ userId, status: "active" });
+		const activeCart = await cartModel
+			.findOne({ userId, status: "active" })
+			.populate("items.product");
 
 		if (!activeCart) {
 			const newCart = await createCartForUser({ userId });
@@ -80,8 +82,11 @@ export const addItemToCart = async ({
 		cart.totalAmount += (product?.price || 0) * quantity;
 
 		const updatedCart = await cart.save();
+		const populatedCart = await cartModel
+			.findById(updatedCart._id)
+			.populate("items.product");
 
-		return updatedCart;
+		return populatedCart || updatedCart;
 	} catch (error: any) {
 		throw new Error(error.message);
 	}
@@ -125,7 +130,11 @@ export const updateItemInCart = async ({
 
 		await cart.save();
 
-		return cart;
+		const populatedCart = await cartModel
+			.findById(cart._id)
+			.populate("items.product");
+
+		return populatedCart || cart;
 	} catch (error: any) {
 		throw new Error(error.message);
 	}
@@ -178,7 +187,11 @@ export const deleteItemFromCart = async ({
 
 		await cart.save();
 
-		return cart;
+		const populatedCart = await cartModel
+			.findById(cart._id)
+			.populate("items.product");
+
+		return populatedCart || cart;
 	} catch (error: any) {
 		throw new Error(error.message);
 	}
@@ -196,13 +209,30 @@ export const checkout = async ({ userId, address }: Checkout) => {
 
 		const cart = await getActiveCartForUser({ userId });
 
+		if (cart.items.length === 0) {
+			return { message: "Cart is empty. Add items before checkout." };
+		}
+
 		const orderItems: IOrderItem[] = [];
 
+		// Decrement stock for each item
 		for (const item of cart.items) {
 			const product = await productModel.findById(item.product);
+			if (!product) {
+				return { message: `Product not found: ${item.product}` };
+			}
+			if (product.stock < item.quantity) {
+				return {
+					message: `Insufficient stock for ${product.name}. Only ${product.stock} left.`,
+				};
+			}
+
+			product.stock -= item.quantity;
+			await product.save();
+
 			orderItems.push({
-				productTitle: product?.name || "",
-				productImage: product?.imageUrl || "",
+				productTitle: product.name,
+				productImage: product.imageUrl,
 				quantity: item.quantity,
 				unitPrice: item.unitPrice,
 			});
