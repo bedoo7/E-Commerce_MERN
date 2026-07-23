@@ -111,6 +111,60 @@ export const getmebytoken = async (userId: string) => {
 	}
 };
 
+// Update user
+export const updateUser = async (
+	userId: string,
+	updateData: {
+		firstName?: string;
+		lastName?: string;
+		email?: string;
+		role?: string;
+	},
+) => {
+	try {
+		const user = await userModel
+			.findByIdAndUpdate(userId, updateData, {
+				new: true,
+				runValidators: true,
+			})
+			.select("-password");
+		if (!user) {
+			throw new Error("User not found");
+		}
+		return user;
+	} catch (error: any) {
+		throw new Error(error.message);
+	}
+};
+
+// Delete user
+export const deleteUser = async (userId: string) => {
+	try {
+		const user = await userModel.findByIdAndDelete(userId);
+		if (!user) {
+			throw new Error("User not found");
+		}
+		return { message: "User deleted successfully" };
+	} catch (error: any) {
+		throw new Error(error.message);
+	}
+};
+
+// Toggle user active status
+export const toggleUserActive = async (userId: string) => {
+	try {
+		const user = await userModel.findById(userId);
+		if (!user) {
+			throw new Error("User not found");
+		}
+		user.isActive = !user.isActive;
+		await user.save();
+		return { isActive: user.isActive };
+	} catch (error: any) {
+		throw new Error(error.message);
+	}
+};
+
 //Get All Users with Pagination, Search, Filter, Sort
 export const getAllUsers = async (
 	queryParams: UserQueryParams = {},

@@ -1,3 +1,8 @@
+/* 
+ * Luxe Store - Global Styles
+ * Premium e-commerce application
+ */
+
 * {
 	margin: 0;
 	padding: 0;
@@ -21,11 +26,12 @@ body {
 	-moz-osx-font-smoothing: grayscale;
 }
 
-#root {
-	min-height: 100vh;
+img {
+	max-width: 100%;
+	height: auto;
 }
 
-/* Scrollbar Styling */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
 	width: 8px;
 }
@@ -43,27 +49,49 @@ body {
 	background: #64748b;
 }
 
-/* Input number arrows hide */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-	-webkit-appearance: none;
-	margin: 0;
+/* Animations */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
-input[type="number"] {
-	-moz-appearance: textfield;
+@keyframes shimmer {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
 }
 
-/* Image error fallback */
-img {
-	transition: opacity 0.3s ease;
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
 }
 
-/* Smooth transitions for theme switching */
-.MuiPaper-root,
-.MuiCard-root,
-.MuiAppBar-root {
-	transition:
-		background-color 0.3s ease,
-		border-color 0.3s ease !important;
+.fade-in {
+	animation: fadeIn 0.3s ease-out;
+}
+
+/* Focus styles for accessibility */
+:focus-visible {
+	outline: 2px solid #4f46e5;
+	outline-offset: 2px;
+}
+
+/* Selection color */
+::selection {
+	background-color: rgba(79, 70, 229, 0.2);
+	color: inherit;
 }

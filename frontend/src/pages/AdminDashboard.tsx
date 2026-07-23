@@ -35,6 +35,7 @@ import AddIcon from "@mui/icons-material/Add";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import PeopleIcon from "@mui/icons-material/People";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import { api } from "../api/axios";
 import {
 	IProduct,
@@ -49,6 +50,7 @@ import {
 	TableSkeletonRows,
 } from "../components/common/LoadingSkeletons";
 import { PaginationComponent } from "../components/common/PaginationComponent";
+import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import toast from "react-hot-toast";
 
 const statusColors: Record<
@@ -79,12 +81,14 @@ export const AdminDashboard: React.FC = () => {
 	const [tabIndex, setTabIndex] = useState(0);
 	const [productPage, setProductPage] = useState(1);
 	const [orderPage, setOrderPage] = useState(1);
+	const [userPage, setUserPage] = useState(1);
 	const limit = 12;
 
 	// Product management state
 	const [productDialogOpen, setProductDialogOpen] = useState(false);
 	const [editingProduct, setEditingProduct] =
 		useState<Partial<IProduct> | null>(null);
+	const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
 	const [productForm, setProductForm] = useState({
 		name: "",
 		description: "",
@@ -100,12 +104,44 @@ export const AdminDashboard: React.FC = () => {
 	const [selectedOrder, setSelectedOrder] = useState<IOrder | null>(null);
 	const [newStatus, setNewStatus] = useState<OrderStatus>("pending");
 
-	// Fetch users
+	// User management state
+	const [userDialogOpen, setUserDialogOpen] = useState(false);
+	const [editingUser, setEditingUser] = useState<Partial<IUser> | null>(null);
+	const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+	const [userForm, setUserForm] = useState({
+		firstName: "",
+		lastName: "",
+		email: "",
+		password: "",
+		role: "user" as "user" | "admin",
+	});
+
+	// Fetch dashboard stats
+	const { data: stats } = useQuery({
+		queryKey: ["admin-stats"],
+		queryFn: async () => {
+			const [usersRes, productsRes, ordersRes] = await Promise.all([
+				api.get<IUsersResponse>("/user/getAllUsers"),
+				api.get<IPaginatedResponse<IProduct>>("/product?limit=1"),
+				api.get<IPaginatedResponse<IOrder>>("/order/admin/all?limit=1"),
+			]);
+			return {
+				totalUsers: usersRes.data.count || 0,
+				totalProducts: productsRes.data.pagination?.totalItems || 0,
+				totalOrders: ordersRes.data.pagination?.totalItems || 0,
+			};
+		},
+		staleTime: 1000 * 30,
+	});
+
+	// Fetch users with pagination
 	const { data: usersData, isLoading: usersLoading } = useQuery<IUsersResponse>(
 		{
-			queryKey: ["admin-users"],
+			queryKey: ["admin-users", userPage],
 			queryFn: async () => {
-				const res = await api.get<IUsersResponse>("/user/getAllUsers");
+				const res = await api.get<IUsersResponse>(
+					`/user/getAllUsers?page=${userPage}&limit=${limit}`,
+				);
 				return res.data;
 			},
 		},
@@ -169,9 +205,11 @@ export const AdminDashboard: React.FC = () => {
 			queryClient.invalidateQueries({ queryKey: ["admin-products"] });
 			queryClient.invalidateQueries({ queryKey: ["products"] });
 			toast.success("Product deleted!");
+			setDeleteProductId(null);
 		},
 		onError: (err: any) => {
 			toast.error(err.message || "Failed to delete product");
+			setDeleteProductId(null);
 		},
 	});
 
@@ -197,6 +235,50 @@ export const AdminDashboard: React.FC = () => {
 		},
 	});
 
+	// Save user (create/edit)
+	const saveUserMutation = useMutation({
+		mutationFn: async (data: {
+			firstName: string;
+			lastName: string;
+			email: string;
+			password?: string;
+			role: string;
+		}) => {
+			if (editingUser?._id) {
+				const res = await api.put(`/user/${editingUser._id}`, data);
+				return res.data;
+			} else {
+				const res = await api.post("/user/register", data);
+				return res.data;
+			}
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+			toast.success(editingUser ? "User updated!" : "User created!");
+			setUserDialogOpen(false);
+			resetUserForm();
+		},
+		onError: (err: any) => {
+			toast.error(err.message || "Failed to save user");
+		},
+	});
+
+	// Delete user mutation
+	const deleteUserMutation = useMutation({
+		mutationFn: async (userId: string) => {
+			await api.delete(`/user/${userId}`);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+			toast.success("User deleted!");
+			setDeleteUserId(null);
+		},
+		onError: (err: any) => {
+			toast.error(err.message || "Failed to delete user");
+			setDeleteUserId(null);
+		},
+	});
+
 	const resetProductForm = () => {
 		setProductForm({
 			name: "",
@@ -208,6 +290,17 @@ export const AdminDashboard: React.FC = () => {
 			imageUrl: "",
 		});
 		setEditingProduct(null);
+	};
+
+	const resetUserForm = () => {
+		setUserForm({
+			firstName: "",
+			lastName: "",
+			email: "",
+			password: "",
+			role: "user",
+		});
+		setEditingUser(null);
 	};
 
 	const openEditProduct = (product: IProduct) => {
@@ -237,10 +330,45 @@ export const AdminDashboard: React.FC = () => {
 		saveProductMutation.mutate(productForm);
 	};
 
-	const handleDeleteProduct = (productId: string) => {
-		if (window.confirm("Are you sure you want to delete this product?")) {
-			deleteProductMutation.mutate(productId);
+	const openEditUser = (user: IUser) => {
+		setEditingUser(user);
+		setUserForm({
+			firstName: user.firstName,
+			lastName: user.lastName,
+			email: user.email,
+			password: "",
+			role: user.role,
+		});
+		setUserDialogOpen(true);
+	};
+
+	const openCreateUser = () => {
+		resetUserForm();
+		setUserDialogOpen(true);
+	};
+
+	const handleSaveUser = () => {
+		if (!userForm.firstName || !userForm.lastName || !userForm.email) {
+			toast.error("Name and email are required");
+			return;
 		}
+		if (!editingUser && !userForm.password) {
+			toast.error("Password is required for new users");
+			return;
+		}
+		const data = editingUser
+			? { ...userForm }
+			: { ...userForm, password: userForm.password };
+		saveUserMutation.mutate(
+			userForm.password
+				? { ...userForm, password: userForm.password }
+				: {
+						firstName: userForm.firstName,
+						lastName: userForm.lastName,
+						email: userForm.email,
+						role: userForm.role,
+					},
+		);
 	};
 
 	const handleOpenStatus = (order: IOrder) => {
@@ -253,6 +381,8 @@ export const AdminDashboard: React.FC = () => {
 	const ordersPagination = ordersData?.pagination;
 	const products = productsData?.data ?? [];
 	const productsPagination = productsData?.pagination;
+	const usersPagination = usersData?.pagination;
+	const totalItems = productsData?.pagination?.totalItems || 0;
 
 	return (
 		<Box>
@@ -263,89 +393,76 @@ export const AdminDashboard: React.FC = () => {
 				Manage products, orders, and users
 			</Typography>
 
-			{/* Stats Cards */}
+			{/* Dashboard Stats Cards */}
 			<Grid container spacing={3} mb={4}>
-				<Grid item xs={12} sm={4}>
-					<Card
-						sx={{
-							borderRadius: 3,
-							border: "1px solid",
-							borderColor: "divider",
-						}}
-					>
-						<CardContent>
-							<Stack direction="row" alignItems="center" spacing={2}>
-								<PeopleIcon color="primary" sx={{ fontSize: 40 }} />
-								<Box>
-									<Typography
-										variant="overline"
-										color="text.secondary"
-										fontWeight={700}
+				{[
+					{
+						icon: <PeopleIcon sx={{ fontSize: 40 }} color="primary" />,
+						label: "Total Users",
+						value: stats?.totalUsers ?? usersData?.count ?? 0,
+						color: "primary.main",
+					},
+					{
+						icon: <InventoryIcon sx={{ fontSize: 40 }} color="secondary" />,
+						label: "Total Products",
+						value: stats?.totalProducts ?? totalItems,
+						color: "secondary.main",
+					},
+					{
+						icon: <LocalShippingIcon sx={{ fontSize: 40 }} color="success" />,
+						label: "Total Orders",
+						value: stats?.totalOrders ?? ordersPagination?.totalItems ?? 0,
+						color: "success.main",
+					},
+				].map((stat) => (
+					<Grid item xs={12} sm={4} key={stat.label}>
+						<Card
+							sx={{
+								borderRadius: 3,
+								border: "1px solid",
+								borderColor: "divider",
+								transition: "transform 0.2s, box-shadow 0.2s",
+								"&:hover": {
+									transform: "translateY(-2px)",
+									boxShadow: 3,
+								},
+							}}
+						>
+							<CardContent>
+								<Stack direction="row" alignItems="center" spacing={2}>
+									<Box
+										sx={{
+											width: 56,
+											height: 56,
+											borderRadius: 2.5,
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											bgcolor: (theme) =>
+												theme.palette.mode === "light"
+													? `${stat.color}15`
+													: `${stat.color}20`,
+										}}
 									>
-										Total Users
-									</Typography>
-									<Typography variant="h4" fontWeight={800}>
-										{usersData?.count || 0}
-									</Typography>
-								</Box>
-							</Stack>
-						</CardContent>
-					</Card>
-				</Grid>
-				<Grid item xs={12} sm={4}>
-					<Card
-						sx={{
-							borderRadius: 3,
-							border: "1px solid",
-							borderColor: "divider",
-						}}
-					>
-						<CardContent>
-							<Stack direction="row" alignItems="center" spacing={2}>
-								<InventoryIcon color="secondary" sx={{ fontSize: 40 }} />
-								<Box>
-									<Typography
-										variant="overline"
-										color="text.secondary"
-										fontWeight={700}
-									>
-										Total Products
-									</Typography>
-									<Typography variant="h4" fontWeight={800}>
-										{productsData?.pagination?.totalItems || 0}
-									</Typography>
-								</Box>
-							</Stack>
-						</CardContent>
-					</Card>
-				</Grid>
-				<Grid item xs={12} sm={4}>
-					<Card
-						sx={{
-							borderRadius: 3,
-							border: "1px solid",
-							borderColor: "divider",
-						}}
-					>
-						<CardContent>
-							<Stack direction="row" alignItems="center" spacing={2}>
-								<LocalShippingIcon color="success" sx={{ fontSize: 40 }} />
-								<Box>
-									<Typography
-										variant="overline"
-										color="text.secondary"
-										fontWeight={700}
-									>
-										Total Orders
-									</Typography>
-									<Typography variant="h4" fontWeight={800}>
-										{ordersData?.pagination?.totalItems || 0}
-									</Typography>
-								</Box>
-							</Stack>
-						</CardContent>
-					</Card>
-				</Grid>
+										{stat.icon}
+									</Box>
+									<Box>
+										<Typography
+											variant="overline"
+											color="text.secondary"
+											fontWeight={700}
+										>
+											{stat.label}
+										</Typography>
+										<Typography variant="h4" fontWeight={800}>
+											{stat.value.toLocaleString()}
+										</Typography>
+									</Box>
+								</Stack>
+							</CardContent>
+						</Card>
+					</Grid>
+				))}
 			</Grid>
 
 			{/* Tab Navigation */}
@@ -452,7 +569,7 @@ export const AdminDashboard: React.FC = () => {
 															<IconButton
 																size="small"
 																color="error"
-																onClick={() => handleDeleteProduct(product._id)}
+																onClick={() => setDeleteProductId(product._id)}
 															>
 																<DeleteIcon />
 															</IconButton>
@@ -486,7 +603,7 @@ export const AdminDashboard: React.FC = () => {
 							<TableContainer component={Paper}>
 								<Table>
 									<TableBody>
-										<TableSkeletonRows rows={5} cols={6} />
+										<TableSkeletonRows rows={5} cols={7} />
 									</TableBody>
 								</Table>
 							</TableContainer>
@@ -579,63 +696,110 @@ export const AdminDashboard: React.FC = () => {
 				{/* Users Tab */}
 				<TabPanel value={tabIndex} index={2}>
 					<Box px={3}>
-						<Typography variant="h6" fontWeight={700} mb={3}>
-							Registered Users
-						</Typography>
+						<Box
+							display="flex"
+							justifyContent="space-between"
+							alignItems="center"
+							mb={3}
+						>
+							<Typography variant="h6" fontWeight={700}>
+								Registered Users
+							</Typography>
+							<Button
+								variant="contained"
+								startIcon={<AddIcon />}
+								onClick={openCreateUser}
+							>
+								Add User
+							</Button>
+						</Box>
 						{usersLoading ? (
 							<TableContainer component={Paper}>
 								<Table>
 									<TableBody>
-										<TableSkeletonRows rows={8} cols={4} />
+										<TableSkeletonRows rows={8} cols={5} />
 									</TableBody>
 								</Table>
 							</TableContainer>
 						) : (
-							<TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-								<Table>
-									<TableHead sx={{ bgcolor: "action.hover" }}>
-										<TableRow>
-											<TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
-											<TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-											<TableCell sx={{ fontWeight: 700 }}>Role</TableCell>
-											<TableCell sx={{ fontWeight: 700 }}>Joined</TableCell>
-										</TableRow>
-									</TableHead>
-									<TableBody>
-										{usersData?.users.map((user) => (
-											<TableRow key={user._id} hover>
-												<TableCell>
-													<Typography fontWeight={600}>
-														{user.firstName} {user.lastName}
-													</Typography>
-												</TableCell>
-												<TableCell>{user.email}</TableCell>
-												<TableCell>
-													<Chip
-														label={(user.role || "user").toUpperCase()}
-														color={
-															user.role === "admin" ? "secondary" : "default"
-														}
-														size="small"
-														sx={{ fontWeight: 700 }}
-													/>
-												</TableCell>
-												<TableCell>
-													{user.createdAt
-														? new Date(user.createdAt).toLocaleDateString()
-														: "N/A"}
-												</TableCell>
+							<>
+								<TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+									<Table>
+										<TableHead sx={{ bgcolor: "action.hover" }}>
+											<TableRow>
+												<TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
+												<TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
+												<TableCell sx={{ fontWeight: 700 }}>Role</TableCell>
+												<TableCell sx={{ fontWeight: 700 }}>Joined</TableCell>
+												<TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
 											</TableRow>
-										))}
-									</TableBody>
-								</Table>
-							</TableContainer>
+										</TableHead>
+										<TableBody>
+											{usersData?.users.map((user) => (
+												<TableRow key={user._id} hover>
+													<TableCell>
+														<Typography fontWeight={600}>
+															{user.firstName} {user.lastName}
+														</Typography>
+													</TableCell>
+													<TableCell>{user.email}</TableCell>
+													<TableCell>
+														<Chip
+															label={(user.role || "user").toUpperCase()}
+															color={
+																user.role === "admin" ? "secondary" : "default"
+															}
+															size="small"
+															sx={{ fontWeight: 700 }}
+														/>
+													</TableCell>
+													<TableCell>
+														{user.createdAt
+															? new Date(user.createdAt).toLocaleDateString()
+															: "N/A"}
+													</TableCell>
+													<TableCell>
+														<Stack direction="row" spacing={1}>
+															<Tooltip title="Edit User">
+																<IconButton
+																	size="small"
+																	color="primary"
+																	onClick={() => openEditUser(user)}
+																>
+																	<EditIcon />
+																</IconButton>
+															</Tooltip>
+															<Tooltip title="Delete User">
+																<IconButton
+																	size="small"
+																	color="error"
+																	onClick={() => setDeleteUserId(user._id)}
+																>
+																	<DeleteIcon />
+																</IconButton>
+															</Tooltip>
+														</Stack>
+													</TableCell>
+												</TableRow>
+											))}
+										</TableBody>
+									</Table>
+								</TableContainer>
+								{usersPagination && (
+									<Box mt={2}>
+										<PaginationComponent
+											pagination={usersPagination}
+											onPageChange={setUserPage}
+										/>
+									</Box>
+								)}
+							</>
 						)}
 					</Box>
 				</TabPanel>
 			</Card>
 
-			{/* Product Dialog */}
+			{/* Product Dialog - Create/Edit */}
 			<Dialog
 				open={productDialogOpen}
 				onClose={() => setProductDialogOpen(false)}
@@ -801,6 +965,116 @@ export const AdminDashboard: React.FC = () => {
 					</Button>
 				</DialogActions>
 			</Dialog>
+
+			{/* User Dialog - Create/Edit */}
+			<Dialog
+				open={userDialogOpen}
+				onClose={() => setUserDialogOpen(false)}
+				fullWidth
+				maxWidth="sm"
+			>
+				<DialogTitle fontWeight={700}>
+					{editingUser ? "Edit User" : "Add New User"}
+				</DialogTitle>
+				<DialogContent>
+					<Stack spacing={2} mt={1}>
+						<Grid container spacing={2}>
+							<Grid item xs={6}>
+								<TextField
+									fullWidth
+									label="First Name"
+									value={userForm.firstName}
+									onChange={(e) =>
+										setUserForm({ ...userForm, firstName: e.target.value })
+									}
+								/>
+							</Grid>
+							<Grid item xs={6}>
+								<TextField
+									fullWidth
+									label="Last Name"
+									value={userForm.lastName}
+									onChange={(e) =>
+										setUserForm({ ...userForm, lastName: e.target.value })
+									}
+								/>
+							</Grid>
+						</Grid>
+						<TextField
+							fullWidth
+							label="Email"
+							type="email"
+							value={userForm.email}
+							onChange={(e) =>
+								setUserForm({ ...userForm, email: e.target.value })
+							}
+						/>
+						<TextField
+							fullWidth
+							label={
+								editingUser ? "New Password (leave blank to keep)" : "Password"
+							}
+							type="password"
+							value={userForm.password}
+							onChange={(e) =>
+								setUserForm({ ...userForm, password: e.target.value })
+							}
+							required={!editingUser}
+						/>
+						<TextField
+							fullWidth
+							select
+							label="Role"
+							value={userForm.role}
+							onChange={(e) =>
+								setUserForm({
+									...userForm,
+									role: e.target.value as "user" | "admin",
+								})
+							}
+						>
+							<MenuItem value="user">User</MenuItem>
+							<MenuItem value="admin">Admin</MenuItem>
+						</TextField>
+					</Stack>
+				</DialogContent>
+				<DialogActions sx={{ p: 3 }}>
+					<Button onClick={() => setUserDialogOpen(false)} color="inherit">
+						Cancel
+					</Button>
+					<Button
+						onClick={handleSaveUser}
+						variant="contained"
+						disabled={saveUserMutation.isPending}
+					>
+						{saveUserMutation.isPending ? "Saving..." : "Save"}
+					</Button>
+				</DialogActions>
+			</Dialog>
+
+			{/* Delete Product Confirmation */}
+			<ConfirmDialog
+				open={!!deleteProductId}
+				title="Delete Product"
+				message="Are you sure you want to delete this product? This action cannot be undone."
+				onConfirm={() => {
+					if (deleteProductId) deleteProductMutation.mutate(deleteProductId);
+				}}
+				onCancel={() => setDeleteProductId(null)}
+				isLoading={deleteProductMutation.isPending}
+			/>
+
+			{/* Delete User Confirmation */}
+			<ConfirmDialog
+				open={!!deleteUserId}
+				title="Delete User"
+				message="Are you sure you want to delete this user? This action cannot be undone."
+				onConfirm={() => {
+					if (deleteUserId) deleteUserMutation.mutate(deleteUserId);
+				}}
+				onCancel={() => setDeleteUserId(null)}
+				isLoading={deleteUserMutation.isPending}
+			/>
 		</Box>
 	);
 };

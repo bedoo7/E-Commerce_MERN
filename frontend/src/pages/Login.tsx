@@ -116,6 +116,25 @@ export const Login: React.FC = () => {
 									helperText={errors.password?.message}
 								/>
 
+								<MuiLink
+									component={Link}
+									to="/forgot-password"
+									variant="caption"
+									color="text.secondary"
+									sx={{
+										fontWeight: 600,
+										textAlign: "right",
+										textDecoration: "none",
+										cursor: "pointer",
+										"&:hover": {
+											color: "primary.main",
+											textDecoration: "underline",
+										},
+									}}
+								>
+									Forgot Password?
+								</MuiLink>
+
 								<Button
 									type="submit"
 									fullWidth

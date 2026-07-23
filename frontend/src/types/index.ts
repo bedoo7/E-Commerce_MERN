@@ -4,6 +4,7 @@ export interface IUser {
 	lastName: string;
 	email: string;
 	role: "user" | "admin";
+	isActive?: boolean;
 	createdAt?: string;
 	updatedAt?: string;
 }

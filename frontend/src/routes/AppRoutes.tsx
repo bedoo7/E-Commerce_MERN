@@ -5,12 +5,14 @@ import { Login } from "../pages/Login";
 import { Register } from "../pages/Register";
 import { Cart } from "../pages/Cart";
 import { AdminDashboard } from "../pages/AdminDashboard";
-import { ProductDetail } from "../pages/ProductDetail";
-import { MyOrders } from "../pages/MyOrders";
-import { OrderDetail } from "../pages/OrderDetail";
 import { ProtectedRoute } from "../components/ProtectedRoute";
 import { NotFound } from "../pages/NotFound";
 import { Layout } from "../components/layout/Layout";
+import { ForgotPassword } from "../pages/ForgotPassword";
+import { ResetPassword } from "../pages/ResetPassword";
+import { ProductDetail } from "../pages/ProductDetail";
+import { MyOrders } from "../pages/MyOrders";
+import { OrderDetail } from "../pages/OrderDetail";
 
 export const AppRoutes: React.FC = () => {
 	return (
@@ -20,6 +22,8 @@ export const AppRoutes: React.FC = () => {
 				<Route path="/" element={<Home />} />
 				<Route path="/login" element={<Login />} />
 				<Route path="/register" element={<Register />} />
+				<Route path="/forgot-password" element={<ForgotPassword />} />
+				<Route path="/reset-password" element={<ResetPassword />} />
 				<Route path="/product/:id" element={<ProductDetail />} />
 
 				{/* Protected User Routes */}

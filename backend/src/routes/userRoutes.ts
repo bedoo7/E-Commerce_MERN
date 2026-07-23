@@ -4,6 +4,9 @@ import {
 	getmebytoken,
 	loginUser,
 	registerUser,
+	updateUser,
+	deleteUser,
+	toggleUserActive,
 } from "../services/userServices";
 import { authenticate } from "../middleware/auth.middleware";
 import { authorize } from "../middleware/authorize.middleware";
@@ -75,6 +78,46 @@ router.get(
 		try {
 			const usersData = await getAllUsers(req.query);
 			res.status(200).json(usersData);
+		} catch (error: any) {
+			res.status(400).json({ message: error.message });
+		}
+	},
+);
+
+// Admin: Update user
+router.put("/:id", authenticate, authorize("admin"), async (req: any, res) => {
+	try {
+		const user = await updateUser(req.params.id as string, req.body);
+		res.status(200).json(user);
+	} catch (error: any) {
+		res.status(400).json({ message: error.message });
+	}
+});
+
+// Admin: Delete user
+router.delete(
+	"/:id",
+	authenticate,
+	authorize("admin"),
+	async (req: any, res) => {
+		try {
+			const result = await deleteUser(req.params.id as string);
+			res.status(200).json(result);
+		} catch (error: any) {
+			res.status(400).json({ message: error.message });
+		}
+	},
+);
+
+// Admin: Toggle user active status
+router.put(
+	"/:id/toggle-active",
+	authenticate,
+	authorize("admin"),
+	async (req: any, res) => {
+		try {
+			const result = await toggleUserActive(req.params.id as string);
+			res.status(200).json(result);
 		} catch (error: any) {
 			res.status(400).json({ message: error.message });
 		}

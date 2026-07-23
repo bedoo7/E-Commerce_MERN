@@ -7,6 +7,7 @@ import { seedInitialProducts } from "./services/productService";
 import productRoutes from "./routes/productRoutes";
 import cartRoutes from "./routes/cartRoutes";
 import orderRoutes from "./routes/orderRoutes";
+import authRoutes from "./routes/authRoutes";
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use("/user", userRoutes);
 app.use("/product", productRoutes);
 app.use("/cart", cartRoutes);
 app.use("/order", orderRoutes);
+app.use("/auth", authRoutes);
 
 seedInitialProducts();
 
