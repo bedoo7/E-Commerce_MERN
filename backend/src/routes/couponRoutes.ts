@@ -1,0 +1,62 @@
+import express from "express";
+import { authenticate } from "../middleware/auth.middleware";
+import { authorize } from "../middleware/authorize.middleware";
+import {
+	validateCoupon,
+	createCoupon,
+	getAllCoupons,
+	deleteCoupon,
+} from "../services/couponService";
+
+const router = express.Router();
+
+// Validate a coupon (authenticated users)
+router.post("/validate", authenticate, async (req: any, res) => {
+	try {
+		const { code, orderAmount } = req.body;
+		if (!code) {
+			return res.status(400).json({ message: "Coupon code is required" });
+		}
+		const result = await validateCoupon(code, orderAmount || 0);
+		res.status(200).json(result);
+	} catch (error: any) {
+		res.status(400).json({ message: error.message });
+	}
+});
+
+// Admin: Get all coupons
+router.get("/", authenticate, authorize("admin"), async (_req, res) => {
+	try {
+		const coupons = await getAllCoupons();
+		res.status(200).json(coupons);
+	} catch (error: any) {
+		res.status(400).json({ message: error.message });
+	}
+});
+
+// Admin: Create a coupon
+router.post("/", authenticate, authorize("admin"), async (req, res) => {
+	try {
+		const coupon = await createCoupon(req.body);
+		res.status(201).json(coupon);
+	} catch (error: any) {
+		res.status(400).json({ message: error.message });
+	}
+});
+
+// Admin: Delete a coupon
+router.delete(
+	"/:id",
+	authenticate,
+	authorize("admin"),
+	async (req: any, res) => {
+		try {
+			const result = await deleteCoupon(String(req.params.id));
+			res.status(200).json(result);
+		} catch (error: any) {
+			res.status(400).json({ message: error.message });
+		}
+	},
+);
+
+export default router;

@@ -4,7 +4,7 @@ import { IProduct } from "./productModel";
 const CartStatusEnum = ["active", "completed"];
 
 export interface ICartItem {
-	product: IProduct;
+	product: IProduct | mongoose.Types.ObjectId | string;
 	unitPrice: number;
 	quantity: number;
 }

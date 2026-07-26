@@ -1,5 +1,3 @@
-import React from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
 	Box,
@@ -24,6 +22,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import { api } from "../api/axios";
 import { IOrder, OrderStatus } from "../types";
+import { useNavigate, useParams } from "react-router-dom";
 
 const statusColors: Record<
 	OrderStatus,
@@ -107,13 +106,15 @@ export const OrderDetail: React.FC = () => {
 							</Typography>
 							<Typography variant="body2" color="text.secondary">
 								Placed on{" "}
-								{new Date(order.createdAt!).toLocaleDateString("en-US", {
-									year: "numeric",
-									month: "long",
-									day: "numeric",
-									hour: "2-digit",
-									minute: "2-digit",
-								})}
+								{order.createdAt
+									? new Date(order.createdAt).toLocaleDateString("en-US", {
+											year: "numeric",
+											month: "long",
+											day: "numeric",
+											hour: "2-digit",
+											minute: "2-digit",
+										})
+									: "Date unavailable"}
 							</Typography>
 						</Box>
 						<Chip
@@ -126,7 +127,6 @@ export const OrderDetail: React.FC = () => {
 			</Card>
 
 			<Grid container spacing={4}>
-				{/* Order Items */}
 				<Grid item xs={12} md={8}>
 					<Typography variant="h6" fontWeight={700} mb={2}>
 						Order Items
@@ -181,7 +181,6 @@ export const OrderDetail: React.FC = () => {
 					</TableContainer>
 				</Grid>
 
-				{/* Order Summary */}
 				<Grid item xs={12} md={4}>
 					<Card sx={{ borderRadius: 3 }}>
 						<CardContent sx={{ p: 3 }}>
@@ -218,9 +217,7 @@ export const OrderDetail: React.FC = () => {
 									</Typography>
 								</Box>
 							</Stack>
-
 							<Divider sx={{ my: 2 }} />
-
 							<Box>
 								<Typography variant="subtitle2" fontWeight={700} gutterBottom>
 									Shipping Address
@@ -229,9 +226,7 @@ export const OrderDetail: React.FC = () => {
 									{order.address}
 								</Typography>
 							</Box>
-
 							<Divider sx={{ my: 2 }} />
-
 							<Stack direction="row" spacing={1} alignItems="center">
 								<LocalShippingIcon color="primary" fontSize="small" />
 								<Typography variant="caption" color="text.secondary">

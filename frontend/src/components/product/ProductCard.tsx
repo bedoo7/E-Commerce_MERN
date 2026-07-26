@@ -16,8 +16,13 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import AddIcon from "@mui/icons-material/Add";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import HighlightOffIcon from "@mui/icons-material/HighlightOff";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import { IProduct } from "../../types";
 import { useNavigate } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "../../api/axios";
+import toast from "react-hot-toast";
 
 interface ProductCardProps {
 	product: IProduct;
@@ -27,6 +32,7 @@ interface ProductCardProps {
 	cartQuantity?: number;
 	isAddToCartPending: boolean;
 	isUpdatePending?: boolean;
+	inWishlist?: boolean;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -37,10 +43,31 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 	cartQuantity,
 	isAddToCartPending,
 	isUpdatePending,
+	inWishlist,
 }) => {
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 	const inStock = product.stock > 0;
 	const isInCart = cartQuantity !== undefined && cartQuantity > 0;
+
+	const toggleWishlistMutation = useMutation({
+		mutationFn: async () => {
+			if (inWishlist) {
+				await api.delete(`/wishlist/${product._id}`);
+			} else {
+				await api.post(`/wishlist/${product._id}`);
+			}
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+			toast.success(
+				inWishlist ? "Removed from wishlist" : "Added to wishlist!",
+			);
+		},
+		onError: (err: any) => {
+			toast.error(err.message || "Failed to update wishlist");
+		},
+	});
 
 	const handleAddToCartClick = (e: React.MouseEvent) => {
 		e.stopPropagation();
@@ -62,6 +89,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 		if (newQty <= product.stock) {
 			onUpdateQuantity?.(product._id, newQty);
 		}
+	};
+
+	const handleWishlistClick = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		toggleWishlistMutation.mutate();
 	};
 
 	return (
@@ -118,8 +150,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 				<Box
 					sx={{
 						position: "absolute",
-						top: 12,
-						left: 12,
+						top: 16,
+						left: 20,
 						display: "flex",
 						gap: 0.8,
 					}}
@@ -136,14 +168,39 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 						}}
 					/>
 				</Box>
+				<IconButton
+					onClick={handleWishlistClick}
+					sx={{
+						position: "absolute",
+						top: 16,
+						right: 20,
+						bgcolor: "rgba(255,255,255,0.85)",
+						backdropFilter: "blur(4px)",
+						"&:hover": {
+							bgcolor: "#fff",
+							transform: "scale(1.1)",
+						},
+						transition: "all 0.2s ease",
+					}}
+					size="small"
+					disabled={toggleWishlistMutation.isPending}
+				>
+					{inWishlist ? (
+						<FavoriteIcon sx={{ color: "#ef4444", fontSize: 20 }} />
+					) : (
+						<FavoriteBorderIcon sx={{ color: "#64748b", fontSize: 20 }} />
+					)}
+				</IconButton>
 			</Box>
 
 			<CardContent sx={{ flexGrow: 1, p: 2.5 }}>
-				<Stack
-					direction="row"
-					justifyContent="space-between"
-					alignItems="center"
-					mb={1}
+				<Box
+					sx={{
+						display: "flex",
+						justifyContent: "space-between",
+						alignItems: "center",
+						mb: 1,
+					}}
 				>
 					<Typography
 						variant="caption"
@@ -167,7 +224,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 							{inStock ? `${product.stock} left` : "Out of stock"}
 						</Typography>
 					</Stack>
-				</Stack>
+				</Box>
 
 				<Typography
 					variant="h6"
@@ -253,11 +310,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 						startIcon={<AddShoppingCartIcon />}
 						disabled={!inStock || isAddToCartPending}
 						onClick={handleAddToCartClick}
-						sx={{
-							py: 1,
-							borderRadius: 2.5,
-							fontWeight: 700,
-						}}
+						sx={{ py: 1, borderRadius: 2.5, fontWeight: 700 }}
 					>
 						{inStock ? "Add to Cart" : "Out of Stock"}
 					</Button>

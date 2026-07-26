@@ -28,11 +28,26 @@ import { api } from "../api/axios";
 import { ICart, IProduct, IOrder } from "../types";
 import toast from "react-hot-toast";
 
+type CouponValidationResponse = {
+	valid: boolean;
+	discount: number;
+	discountPercent: number;
+	discountValue?: number;
+	code: string;
+	finalTotal?: number;
+};
+
 export const Cart: React.FC = () => {
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	const [checkoutOpen, setCheckoutOpen] = useState(false);
 	const [address, setAddress] = useState("");
+	const [couponCode, setCouponCode] = useState("");
+	const [couponApplied, setCouponApplied] = useState<{
+		code: string;
+		discount: number;
+		discountPercent: number;
+	} | null>(null);
 	const [successOrder, setSuccessOrder] = useState<IOrder | null>(null);
 
 	// Fetch active cart
@@ -94,10 +109,32 @@ export const Cart: React.FC = () => {
 		},
 	});
 
+	const validateCouponMutation = useMutation({
+		mutationFn: async (code: string) => {
+			const res = await api.post<CouponValidationResponse>("/coupon/validate", {
+				code,
+				orderAmount: cart?.totalAmount ?? 0,
+			});
+			return res.data;
+		},
+		onSuccess: (data) => {
+			setCouponApplied({
+				code: data.code,
+				discount: data.discount,
+				discountPercent: data.discountPercent,
+			});
+			toast.success(`Coupon ${data.code} applied successfully`);
+		},
+		onError: (err: any) => {
+			setCouponApplied(null);
+			toast.error(err.message || "Coupon validation failed");
+		},
+	});
+
 	// Checkout mutation
 	const checkoutMutation = useMutation({
-		mutationFn: async (address: string) => {
-			const res = await api.post("/cart/checkout", { address });
+		mutationFn: async (payload: { address: string; couponCode?: string }) => {
+			const res = await api.post("/cart/checkout", payload);
 			return res.data;
 		},
 		onSuccess: (data) => {
@@ -125,13 +162,28 @@ export const Cart: React.FC = () => {
 		}
 	};
 
+	const handleCouponApply = () => {
+		if (!couponCode.trim()) {
+			toast.error("Enter a coupon code first");
+			return;
+		}
+		validateCouponMutation.mutate(couponCode.trim().toUpperCase());
+	};
+
 	const handleCheckoutSubmit = () => {
 		if (!address.trim()) {
 			toast.error("Address is required");
 			return;
 		}
-		checkoutMutation.mutate(address);
+		checkoutMutation.mutate({
+			address,
+			couponCode: couponApplied?.code,
+		});
 	};
+
+	const subtotal = cart?.totalAmount ?? 0;
+	const discountAmount = couponApplied?.discount ?? 0;
+	const finalTotal = Math.max(subtotal - discountAmount, 0);
 
 	if (isLoading) {
 		return (
@@ -457,7 +509,7 @@ export const Cart: React.FC = () => {
 											items)
 										</Typography>
 										<Typography variant="body1" fontWeight={600}>
-											${cart.totalAmount.toLocaleString()}
+											${subtotal.toLocaleString()}
 										</Typography>
 									</Box>
 									<Box display="flex" justifyContent="space-between">
@@ -474,6 +526,18 @@ export const Cart: React.FC = () => {
 									</Box>
 									<Box display="flex" justifyContent="space-between">
 										<Typography variant="body1" color="text.secondary">
+											Discount
+										</Typography>
+										<Typography
+											variant="body1"
+											color="success.main"
+											fontWeight={700}
+										>
+											-{discountAmount.toLocaleString()}
+										</Typography>
+									</Box>
+									<Box display="flex" justifyContent="space-between">
+										<Typography variant="body1" color="text.secondary">
 											Tax
 										</Typography>
 										<Typography variant="body1" color="text.secondary">
@@ -482,12 +546,47 @@ export const Cart: React.FC = () => {
 									</Box>
 								</Stack>
 								<Divider sx={{ my: 2 }} />
+								<Box sx={{ mb: 2.5 }}>
+									<Typography variant="body2" color="text.secondary" mb={1}>
+										Apply coupon code
+									</Typography>
+									<Stack direction="row" spacing={1}>
+										<TextField
+											fullWidth
+											size="small"
+											placeholder="SAVE10"
+											value={couponCode}
+											onChange={(e) => setCouponCode(e.target.value)}
+										/>
+										<Button
+											variant="outlined"
+											onClick={handleCouponApply}
+											disabled={
+												validateCouponMutation.isPending || !couponCode.trim()
+											}
+										>
+											{validateCouponMutation.isPending
+												? "Checking..."
+												: "Apply"}
+										</Button>
+									</Stack>
+									{couponApplied && (
+										<Typography
+											variant="caption"
+											color="success.main"
+											sx={{ mt: 1, display: "block" }}
+										>
+											{couponApplied.code} applied for{" "}
+											{couponApplied.discountPercent}% off
+										</Typography>
+									)}
+								</Box>
 								<Box display="flex" justifyContent="space-between" mb={3}>
 									<Typography variant="h6" fontWeight={800}>
 										Total
 									</Typography>
 									<Typography variant="h6" color="primary" fontWeight={800}>
-										${cart.totalAmount.toLocaleString()}
+										${finalTotal.toLocaleString()}
 									</Typography>
 								</Box>
 
@@ -506,54 +605,34 @@ export const Cart: React.FC = () => {
 				</Grid>
 			)}
 
-			{/* Checkout Dialog */}
 			<Dialog
 				open={checkoutOpen}
 				onClose={() => setCheckoutOpen(false)}
 				fullWidth
 				maxWidth="sm"
-				PaperProps={{
-					sx: { borderRadius: 4 },
-				}}
 			>
-				<DialogTitle fontWeight={700} sx={{ pb: 1 }}>
-					Checkout
-				</DialogTitle>
+				<DialogTitle>Complete Your Checkout</DialogTitle>
 				<DialogContent>
-					<Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-						Enter your shipping address to complete your order of{" "}
-						<strong>${cart?.totalAmount.toLocaleString()}</strong>.
+					<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+						Enter the delivery address for your order.
 					</Typography>
 					<TextField
 						fullWidth
+						label="Delivery Address"
 						multiline
-						rows={3}
-						label="Shipping Address"
-						placeholder="123 Main St, Apartment 4B, New York, NY 10001"
+						minRows={3}
 						value={address}
 						onChange={(e) => setAddress(e.target.value)}
-						required
 					/>
 				</DialogContent>
-				<DialogActions sx={{ p: 3, pt: 0 }}>
+				<DialogActions sx={{ px: 3, pb: 2 }}>
+					<Button onClick={() => setCheckoutOpen(false)}>Cancel</Button>
 					<Button
-						onClick={() => setCheckoutOpen(false)}
-						color="inherit"
-						sx={{ borderRadius: 2 }}
-					>
-						Cancel
-					</Button>
-					<Button
-						onClick={handleCheckoutSubmit}
 						variant="contained"
+						onClick={handleCheckoutSubmit}
 						disabled={checkoutMutation.isPending || !address.trim()}
-						sx={{ borderRadius: 2, px: 4 }}
 					>
-						{checkoutMutation.isPending ? (
-							<CircularProgress size={24} color="inherit" />
-						) : (
-							`Pay $${cart?.totalAmount.toLocaleString()}`
-						)}
+						{checkoutMutation.isPending ? "Placing Order..." : "Place Order"}
 					</Button>
 				</DialogActions>
 			</Dialog>

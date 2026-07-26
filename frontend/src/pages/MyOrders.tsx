@@ -4,9 +4,6 @@ import { useNavigate } from "react-router-dom";
 import {
 	Box,
 	Typography,
-	Card,
-	CardContent,
-	Grid,
 	Chip,
 	Button,
 	CircularProgress,
@@ -17,7 +14,6 @@ import {
 	TableHead,
 	TableRow,
 	Paper,
-	Stack,
 } from "@mui/material";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
@@ -165,14 +161,16 @@ export const MyOrders: React.FC = () => {
 										</TableCell>
 										<TableCell>
 											<Typography variant="body2" color="text.secondary">
-												{new Date(order.createdAt!).toLocaleDateString(
-													"en-US",
-													{
-														year: "numeric",
-														month: "short",
-														day: "numeric",
-													},
-												)}
+												{order.createdAt
+													? new Date(order.createdAt).toLocaleDateString(
+															"en-US",
+															{
+																year: "numeric",
+																month: "short",
+																day: "numeric",
+															},
+														)
+													: "Date N/A"}
 											</Typography>
 										</TableCell>
 										<TableCell>

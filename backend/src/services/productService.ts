@@ -1,4 +1,6 @@
 import { productModel, IProduct } from "../models/productModel";
+import { wishlistModel } from "../models/wishlistModel";
+import { normalizeName } from "./brandService";
 import {
 	buildPaginatedResponse,
 	parsePaginationParams,
@@ -26,7 +28,6 @@ export const getAllProducts = async (
 
 	const filter: Record<string, any> = {};
 
-	// Search filter across name, brand, description
 	if (queryParams.search && queryParams.search.trim()) {
 		const searchRegex = new RegExp(queryParams.search.trim(), "i");
 		filter.$or = [
@@ -37,17 +38,14 @@ export const getAllProducts = async (
 		];
 	}
 
-	// Category filter
 	if (queryParams.category && queryParams.category !== "All") {
 		filter.category = queryParams.category;
 	}
 
-	// Brand filter
 	if (queryParams.brand && queryParams.brand !== "All") {
 		filter.brand = queryParams.brand;
 	}
 
-	// Price filter
 	if (
 		queryParams.minPrice !== undefined ||
 		queryParams.maxPrice !== undefined
@@ -61,12 +59,10 @@ export const getAllProducts = async (
 		}
 	}
 
-	// In Stock filter
 	if (queryParams.inStock === "true" || queryParams.inStock === true) {
 		filter.stock = { $gt: 0 };
 	}
 
-	// Allowed sort fields
 	const allowedSortFields = ["price", "createdAt", "name", "stock", "brand"];
 	const sortField = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
 
@@ -107,7 +103,10 @@ export const getProductById = async (productId: string) => {
 };
 
 export const createProduct = async (productData: Partial<IProduct>) => {
-	const product = await productModel.create(productData);
+	const data = { ...productData };
+	if (data.category) data.category = normalizeName(data.category);
+	if (data.brand) data.brand = normalizeName(data.brand);
+	const product = await productModel.create(data);
 	return product;
 };
 
@@ -115,7 +114,10 @@ export const updateProduct = async (
 	productId: string,
 	productData: Partial<IProduct>,
 ) => {
-	const product = await productModel.findByIdAndUpdate(productId, productData, {
+	const data = { ...productData };
+	if (data.category) data.category = normalizeName(data.category);
+	if (data.brand) data.brand = normalizeName(data.brand);
+	const product = await productModel.findByIdAndUpdate(productId, data, {
 		new: true,
 		runValidators: true,
 	});
@@ -130,6 +132,12 @@ export const deleteProduct = async (productId: string) => {
 	if (!product) {
 		throw new Error("Product not found");
 	}
+
+	await wishlistModel.updateMany(
+		{ "items.product": productId },
+		{ $pull: { items: { product: productId } } },
+	);
+
 	return { message: "Product deleted successfully" };
 };
 

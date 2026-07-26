@@ -38,8 +38,31 @@ export const getActiveCartForUser = async ({
 	}
 };
 
+/** Internal: get cart WITHOUT populate for safe ObjectId comparisons */
+const getActiveCartRaw = async (userId: string) => {
+	const activeCart = await cartModel.findOne({ userId, status: "active" });
+	if (!activeCart) {
+		return await createCartForUser({ userId });
+	}
+	return activeCart;
+};
+
+/** Internal: populate items.product and return */
+const populateCart = async (cartId: string) => {
+	return await cartModel.findById(cartId).populate("items.product");
+};
+
+/** Compare a cart item's product ref to a productId (works with ObjectId or populated doc) */
+const matchesProductId = (item: { product: any }, productId: string) => {
+	const ref = item.product;
+	if (typeof ref === "object" && ref !== null && ref._id) {
+		return String(ref._id) === String(productId);
+	}
+	return String(ref) === String(productId);
+};
+
 interface AddItemToCart {
-	productId: any;
+	productId: string;
 	quantity: number;
 	userId: string;
 }
@@ -50,23 +73,25 @@ export const addItemToCart = async ({
 	quantity,
 }: AddItemToCart) => {
 	try {
-		const cart = await getActiveCartForUser({ userId });
+		const cart = await getActiveCartRaw(userId);
 
-		// Does the product already exist in the cart?
 		const existsInCart = cart.items.find((item) =>
-			item.product.equals(productId),
+			matchesProductId(item, productId),
 		);
 
 		const product = await productModel.findById(productId);
+		if (!product) {
+			throw new Error("Product not found");
+		}
 
 		const newQuantity = existsInCart
 			? existsInCart.quantity + quantity
 			: quantity;
 
-		if (newQuantity > (product?.stock || 0)) {
-			return {
-				message: `Cannot add ${quantity} items to cart. Only ${product?.stock} items in stock.`,
-			};
+		if (newQuantity > product.stock) {
+			throw new Error(
+				`Cannot add ${quantity} items to cart. Only ${product.stock} items in stock.`,
+			);
 		}
 
 		if (existsInCart) {
@@ -75,18 +100,16 @@ export const addItemToCart = async ({
 			cart.items.push({
 				product: productId,
 				quantity,
-				unitPrice: product?.price || 0,
+				unitPrice: product.price,
 			});
 		}
 
-		cart.totalAmount += (product?.price || 0) * quantity;
+		cart.totalAmount += product.price * quantity;
 
-		const updatedCart = await cart.save();
-		const populatedCart = await cartModel
-			.findById(updatedCart._id)
-			.populate("items.product");
+		await cart.save();
+		const populatedCart = await populateCart(cart._id.toString());
 
-		return populatedCart || updatedCart;
+		return populatedCart || cart;
 	} catch (error: any) {
 		throw new Error(error.message);
 	}
@@ -94,7 +117,7 @@ export const addItemToCart = async ({
 
 interface UpdateItemInCart {
 	userId: string;
-	productId: any;
+	productId: string;
 	quantity: number;
 }
 export const updateItemInCart = async ({
@@ -103,25 +126,28 @@ export const updateItemInCart = async ({
 	quantity,
 }: UpdateItemInCart) => {
 	try {
-		const cart = await getActiveCartForUser({ userId });
+		const cart = await getActiveCartRaw(userId);
 		const existsInCart = cart.items.find((item) =>
-			item.product.equals(productId),
+			matchesProductId(item, productId),
 		);
 
 		if (!existsInCart) {
-			return { message: "Item not found in cart" };
+			throw new Error("Item not found in cart");
 		}
 
 		const product = await productModel.findById(productId);
+		if (!product) {
+			throw new Error("Product not found");
+		}
 
-		if (quantity > (product?.stock || 0)) {
-			return {
-				message: `Cannot add ${quantity} items to cart. Only ${product?.stock} items in stock.`,
-			};
+		if (quantity > product.stock) {
+			throw new Error(
+				`Cannot set quantity to ${quantity}. Only ${product.stock} items in stock.`,
+			);
 		}
 
 		existsInCart.quantity = quantity;
-		existsInCart.unitPrice = product?.price || 0;
+		existsInCart.unitPrice = product.price;
 
 		cart.totalAmount = cart.items.reduce(
 			(total, item) => total + item.quantity * item.unitPrice,
@@ -129,10 +155,7 @@ export const updateItemInCart = async ({
 		);
 
 		await cart.save();
-
-		const populatedCart = await cartModel
-			.findById(cart._id)
-			.populate("items.product");
+		const populatedCart = await populateCart(cart._id.toString());
 
 		return populatedCart || cart;
 	} catch (error: any) {
@@ -145,7 +168,7 @@ interface ClearCart {
 }
 export const clearCart = async ({ userId }: ClearCart) => {
 	try {
-		const cart = await getActiveCartForUser({ userId });
+		const cart = await getActiveCartRaw(userId);
 		cart.items = [];
 		await cart.save();
 		return { message: "Cart cleared successfully" };
@@ -156,7 +179,7 @@ export const clearCart = async ({ userId }: ClearCart) => {
 
 interface DeleteItemFromCart {
 	userId: string;
-	productId: any;
+	productId: string;
 }
 
 export const deleteItemFromCart = async ({
@@ -164,21 +187,19 @@ export const deleteItemFromCart = async ({
 	productId,
 }: DeleteItemFromCart) => {
 	try {
-		const cart = await getActiveCartForUser({ userId });
+		const cart = await getActiveCartRaw(userId);
 
 		const existsInCart = cart.items.find((item) =>
-			item.product.equals(productId),
+			matchesProductId(item, productId),
 		);
 
 		if (!existsInCart) {
-			return { message: "Item not found in cart" };
+			throw new Error("Item not found in cart");
 		}
 
-		const otherItems = cart.items.filter(
-			(item) => !item.product.equals(productId),
+		cart.items = cart.items.filter(
+			(item) => !matchesProductId(item, productId),
 		);
-
-		cart.items = otherItems;
 
 		cart.totalAmount = cart.items.reduce(
 			(total, item) => total + item.quantity * item.unitPrice,
@@ -186,10 +207,7 @@ export const deleteItemFromCart = async ({
 		);
 
 		await cart.save();
-
-		const populatedCart = await cartModel
-			.findById(cart._id)
-			.populate("items.product");
+		const populatedCart = await populateCart(cart._id.toString());
 
 		return populatedCart || cart;
 	} catch (error: any) {
@@ -204,35 +222,34 @@ interface Checkout {
 export const checkout = async ({ userId, address }: Checkout) => {
 	try {
 		if (!address) {
-			return { message: "Address is required for checkout" };
+			throw new Error("Shipping address is required for checkout");
 		}
 
 		const cart = await getActiveCartForUser({ userId });
 
 		if (cart.items.length === 0) {
-			return { message: "Cart is empty. Add items before checkout." };
+			throw new Error("Cart is empty. Add items before checkout.");
 		}
 
 		const orderItems: IOrderItem[] = [];
 
-		// Decrement stock for each item
 		for (const item of cart.items) {
-			const product = await productModel.findById(item.product);
-			if (!product) {
-				return { message: `Product not found: ${item.product}` };
-			}
-			if (product.stock < item.quantity) {
-				return {
-					message: `Insufficient stock for ${product.name}. Only ${product.stock} left.`,
-				};
+			const product = item.product as any;
+			const productId = product._id ? String(product._id) : String(product);
+
+			if (product.stock === undefined || product.stock < item.quantity) {
+				throw new Error(
+					`Insufficient stock for ${product.name || "product"}. Only ${product.stock || 0} left.`,
+				);
 			}
 
-			product.stock -= item.quantity;
-			await product.save();
+			await productModel.findByIdAndUpdate(productId, {
+				$inc: { stock: -item.quantity },
+			});
 
 			orderItems.push({
-				productTitle: product.name,
-				productImage: product.imageUrl,
+				productTitle: product.name || "Product",
+				productImage: product.imageUrl || "",
 				quantity: item.quantity,
 				unitPrice: item.unitPrice,
 			});
@@ -245,10 +262,9 @@ export const checkout = async ({ userId, address }: Checkout) => {
 			address,
 		});
 
-		await order.save();
-
 		cart.status = "completed";
 		await cart.save();
+
 		return order;
 	} catch (error: any) {
 		throw new Error(error.message);

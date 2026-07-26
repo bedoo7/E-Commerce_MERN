@@ -117,3 +117,93 @@ export interface IUsersResponse extends IPaginatedResponse<IUser> {
 	users: IUser[];
 	count: number;
 }
+
+export interface IWishlistItem {
+	product: IProduct | string | null;
+	addedAt: string;
+	_id?: string;
+}
+
+export interface IWishlist {
+	_id: string;
+	userId: string;
+	items: IWishlistItem[];
+}
+
+export type CouponDiscountType = "percentage" | "fixed";
+
+export interface ICoupon {
+	_id: string;
+	code: string;
+	discountType?: CouponDiscountType;
+	discountPercent: number;
+	discountValue?: number;
+	minOrderAmount: number;
+	expiresAt: string;
+	usageLimit: number;
+	usedCount: number;
+	isActive: boolean;
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+export interface IReviewUser {
+	_id: string;
+	firstName: string;
+	lastName: string;
+}
+
+export interface IReview {
+	_id: string;
+	productId: string;
+	userId: IReviewUser | string;
+	rating: number;
+	comment: string;
+	isVerifiedPurchase?: boolean;
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+export interface IReviewResponse {
+	reviews: IReview[];
+	averageRating: number;
+	totalReviews: number;
+	ratingDistribution: number[];
+}
+
+export interface IAnalyticsRevenue {
+	totalRevenue: number;
+	totalOrders: number;
+	avgOrderValue: number;
+}
+
+export interface IAnalyticsRevenueByMonth {
+	month: string;
+	revenue: number;
+	orders: number;
+}
+
+export interface IAnalyticsTopSelling {
+	_id: string;
+	totalQuantity: number;
+	totalRevenue: number;
+}
+
+export interface IAnalyticsStock {
+	lowStock: number;
+	outOfStock: number;
+}
+
+export interface IAnalyticsTotals {
+	users: number;
+	products: number;
+}
+
+export interface IAnalytics {
+	revenue: IAnalyticsRevenue;
+	revenueByMonth: IAnalyticsRevenueByMonth[];
+	ordersByStatus: Record<string, number>;
+	topSelling: IAnalyticsTopSelling[];
+	stock: IAnalyticsStock;
+	totals: IAnalyticsTotals;
+}

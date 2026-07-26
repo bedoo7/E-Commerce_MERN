@@ -28,6 +28,14 @@ import {
 	Tooltip,
 	Grid,
 	Divider,
+	Alert,
+	List,
+	ListItem,
+	ListItemText,
+	LinearProgress,
+	Autocomplete,
+	FormControlLabel,
+	Switch,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -36,6 +44,10 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import PeopleIcon from "@mui/icons-material/People";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import BarChartIcon from "@mui/icons-material/BarChart";
 import { api } from "../api/axios";
 import {
 	IProduct,
@@ -44,6 +56,8 @@ import {
 	IPaginatedResponse,
 	IUsersResponse,
 	OrderStatus,
+	IAnalytics,
+	ICoupon,
 } from "../types";
 import {
 	ProductSkeletonGrid,
@@ -116,6 +130,43 @@ export const AdminDashboard: React.FC = () => {
 		role: "user" as "user" | "admin",
 	});
 
+	// Category and brand state
+	const [optionDialogOpen, setOptionDialogOpen] = useState(false);
+	const [optionDialogType, setOptionDialogType] = useState<
+		"category" | "brand" | null
+	>(null);
+	const [optionName, setOptionName] = useState("");
+
+	// Coupon management state
+	const [couponDialogOpen, setCouponDialogOpen] = useState(false);
+	const [couponForm, setCouponForm] = useState({
+		code: "",
+		discountType: "percentage" as "percentage" | "fixed",
+		discountPercent: 10,
+		discountValue: 0,
+		minOrderAmount: 0,
+		expiresAt: "",
+		usageLimit: 0,
+		isActive: true,
+	});
+	const [deleteCouponId, setDeleteCouponId] = useState<string | null>(null);
+
+	// Fetch analytics data
+	const {
+		data: analytics,
+		isLoading: analyticsLoading,
+		isError: analyticsError,
+		error: analyticsErrorObj,
+	} = useQuery<IAnalytics>({
+		queryKey: ["admin-analytics"],
+		queryFn: async () => {
+			const res = await api.get<IAnalytics>("/analytics/dashboard");
+			return res.data;
+		},
+		staleTime: 1000 * 30,
+		retry: 1,
+	});
+
 	// Fetch dashboard stats
 	const { data: stats } = useQuery({
 		queryKey: ["admin-stats"],
@@ -172,6 +223,35 @@ export const AdminDashboard: React.FC = () => {
 			return res.data;
 		},
 	});
+
+	// Fetch category and brand options for product dialogs
+	const { data: categoryOptions = [] } = useQuery<string[]>({
+		queryKey: ["categories"],
+		queryFn: async () => {
+			const res = await api.get<string[]>("/category");
+			return res.data;
+		},
+		staleTime: 1000 * 60 * 10,
+	});
+
+	const { data: brandOptions = [] } = useQuery<string[]>({
+		queryKey: ["brands"],
+		queryFn: async () => {
+			const res = await api.get<string[]>("/brand");
+			return res.data;
+		},
+		staleTime: 1000 * 60 * 10,
+	});
+
+	const { data: coupons = [], isLoading: couponsLoading } = useQuery<ICoupon[]>(
+		{
+			queryKey: ["admin-coupons"],
+			queryFn: async () => {
+				const res = await api.get<ICoupon[]>("/coupon");
+				return res.data;
+			},
+		},
+	);
 
 	// Create/Update product mutation
 	const saveProductMutation = useMutation({
@@ -276,6 +356,79 @@ export const AdminDashboard: React.FC = () => {
 		onError: (err: any) => {
 			toast.error(err.message || "Failed to delete user");
 			setDeleteUserId(null);
+		},
+	});
+
+	// Create category / brand mutation
+	const saveOptionMutation = useMutation({
+		mutationFn: async (name: string) => {
+			if (!optionDialogType) {
+				throw new Error("Unable to determine option type");
+			}
+			const endpoint = optionDialogType === "category" ? "/category" : "/brand";
+			const res = await api.post(endpoint, { name });
+			return res.data;
+		},
+		onSuccess: (data) => {
+			queryClient.invalidateQueries({
+				queryKey: [optionDialogType === "category" ? "categories" : "brands"],
+			});
+			const normalized = data?.name || optionName.trim();
+			if (optionDialogType === "category") {
+				setProductForm((current) => ({ ...current, category: normalized }));
+			} else {
+				setProductForm((current) => ({ ...current, brand: normalized }));
+			}
+			setOptionDialogOpen(false);
+			setOptionName("");
+			setOptionDialogType(null);
+			toast.success(
+				`${optionDialogType === "category" ? "Category" : "Brand"} created successfully!`,
+			);
+		},
+		onError: (err: any) => {
+			toast.error(err.message || "Failed to create option");
+		},
+	});
+
+	// Create/delete coupon mutations
+	const saveCouponMutation = useMutation({
+		mutationFn: async (data: typeof couponForm) => {
+			const res = await api.post("/coupon", data);
+			return res.data;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin-coupons"] });
+			toast.success("Coupon created successfully!");
+			setCouponDialogOpen(false);
+			setCouponForm({
+				code: "",
+				discountType: "percentage",
+				discountPercent: 10,
+				discountValue: 0,
+				minOrderAmount: 0,
+				expiresAt: "",
+				usageLimit: 0,
+				isActive: true,
+			});
+		},
+		onError: (err: any) => {
+			toast.error(err.message || "Failed to create coupon");
+		},
+	});
+
+	const deleteCouponMutation = useMutation({
+		mutationFn: async (couponId: string) => {
+			await api.delete(`/coupon/${couponId}`);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin-coupons"] });
+			toast.success("Coupon deleted!");
+			setDeleteCouponId(null);
+		},
+		onError: (err: any) => {
+			toast.error(err.message || "Failed to delete coupon");
+			setDeleteCouponId(null);
 		},
 	});
 
@@ -393,6 +546,222 @@ export const AdminDashboard: React.FC = () => {
 				Manage products, orders, and users
 			</Typography>
 
+			{/* Analytics Loading State */}
+			{analyticsLoading && (
+				<Box sx={{ width: "100%", mb: 3 }}>
+					<LinearProgress />
+					<Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+						Loading analytics...
+					</Typography>
+				</Box>
+			)}
+
+			{/* Analytics Error State */}
+			{analyticsError && (
+				<Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+					Failed to load analytics:{" "}
+					{(analyticsErrorObj as any)?.message || "Unknown error"}
+				</Alert>
+			)}
+
+			{/* Analytics Section */}
+			{analytics && (
+				<Box mb={4}>
+					<Typography variant="h5" fontWeight={700} mb={3}>
+						Analytics Overview
+					</Typography>
+					<Grid container spacing={3} mb={4}>
+						{[
+							{
+								icon: <AttachMoneyIcon sx={{ fontSize: 40 }} color="success" />,
+								label: "Total Revenue",
+								value: analytics.revenue?.totalRevenue ?? 0,
+								color: "success.main",
+								isCurrency: true,
+							},
+							{
+								icon: <ShoppingBagIcon sx={{ fontSize: 40 }} color="primary" />,
+								label: "Total Orders",
+								value: analytics.revenue?.totalOrders ?? 0,
+								color: "primary.main",
+							},
+							{
+								icon: <PeopleIcon sx={{ fontSize: 40 }} color="info" />,
+								label: "Total Users",
+								value: analytics.totals?.users ?? 0,
+								color: "info.main",
+							},
+							{
+								icon: <InventoryIcon sx={{ fontSize: 40 }} color="secondary" />,
+								label: "Total Products",
+								value: analytics.totals?.products ?? 0,
+								color: "secondary.main",
+							},
+							{
+								icon: <TrendingUpIcon sx={{ fontSize: 40 }} color="warning" />,
+								label: "Avg Order Value",
+								value: analytics.revenue?.avgOrderValue ?? 0,
+								color: "warning.main",
+								isCurrency: true,
+							},
+							{
+								icon: <WarningAmberIcon sx={{ fontSize: 40 }} color="error" />,
+								label: "Low Stock Items",
+								value:
+									(analytics.stock?.lowStock ?? 0) +
+									(analytics.stock?.outOfStock ?? 0),
+								color: "error.main",
+							},
+						].map((stat) => (
+							<Grid item xs={12} sm={6} md={4} lg={2} key={stat.label}>
+								<Card
+									sx={{
+										borderRadius: 3,
+										border: "1px solid",
+										borderColor: "divider",
+										transition: "transform 0.2s, box-shadow 0.2s",
+										"&:hover": {
+											transform: "translateY(-2px)",
+											boxShadow: 3,
+										},
+									}}
+								>
+									<CardContent>
+										<Stack direction="row" alignItems="center" spacing={2}>
+											<Box
+												sx={{
+													width: 48,
+													height: 48,
+													borderRadius: 2.5,
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+													bgcolor: (theme) =>
+														theme.palette.mode === "light"
+															? stat.color.replace(".main", "") + "15"
+															: stat.color.replace(".main", "") + "20",
+												}}
+											>
+												{stat.icon}
+											</Box>
+											<Box>
+												<Typography
+													variant="overline"
+													color="text.secondary"
+													fontWeight={700}
+													sx={{ lineHeight: 1.2 }}
+												>
+													{stat.label}
+												</Typography>
+												<Typography variant="h6" fontWeight={800}>
+													{stat.isCurrency
+														? "$" + Number(stat.value).toLocaleString()
+														: Number(stat.value).toLocaleString()}
+												</Typography>
+											</Box>
+										</Stack>
+									</CardContent>
+								</Card>
+							</Grid>
+						))}
+					</Grid>
+
+					{/* Orders by Status & Top Selling Products */}
+					<Grid container spacing={3}>
+						{/* Orders by Status */}
+						<Grid item xs={12} md={6}>
+							<Card
+								sx={{
+									borderRadius: 3,
+									border: "1px solid",
+									borderColor: "divider",
+									height: "100%",
+								}}
+							>
+								<CardContent>
+									<Stack direction="row" alignItems="center" spacing={1} mb={2}>
+										<BarChartIcon color="primary" />
+										<Typography variant="h6" fontWeight={700}>
+											Orders by Status
+										</Typography>
+									</Stack>
+									<List dense>
+										{Object.entries(analytics.ordersByStatus || {}).map(
+											([status, count]) => (
+												<ListItem key={status} sx={{ px: 0 }}>
+													<ListItemText
+														primary={
+															status.charAt(0).toUpperCase() + status.slice(1)
+														}
+														primaryTypographyProps={{ fontWeight: 600 }}
+													/>
+													<Chip
+														label={count as number}
+														color={(statusColors as any)[status] || "default"}
+														size="small"
+														sx={{ fontWeight: 700, minWidth: 40 }}
+													/>
+												</ListItem>
+											),
+										)}
+									</List>
+								</CardContent>
+							</Card>
+						</Grid>
+
+						{/* Top Selling Products */}
+						<Grid item xs={12} md={6}>
+							<Card
+								sx={{
+									borderRadius: 3,
+									border: "1px solid",
+									borderColor: "divider",
+									height: "100%",
+								}}
+							>
+								<CardContent>
+									<Stack direction="row" alignItems="center" spacing={1} mb={2}>
+										<TrendingUpIcon color="primary" />
+										<Typography variant="h6" fontWeight={700}>
+											Top Selling Products
+										</Typography>
+									</Stack>
+									{(analytics.topSelling || []).length === 0 ? (
+										<Typography color="text.secondary" variant="body2">
+											No sales data available yet.
+										</Typography>
+									) : (
+										<List dense>
+											{(analytics.topSelling || []).map(
+												(item: any, idx: number) => (
+													<ListItem key={idx} sx={{ px: 0 }}>
+														<ListItemText
+															primary={item._id}
+															primaryTypographyProps={{ fontWeight: 600 }}
+														/>
+														<Chip
+															label={"#" + String(idx + 1)}
+															color={
+																idx === 0
+																	? "primary"
+																	: idx === 1
+																		? "secondary"
+																		: "default"
+															}
+															size="small"
+														/>
+													</ListItem>
+												),
+											)}
+										</List>
+									)}
+								</CardContent>
+							</Card>
+						</Grid>
+					</Grid>
+				</Box>
+			)}
+
 			{/* Dashboard Stats Cards */}
 			<Grid container spacing={3} mb={4}>
 				{[
@@ -480,9 +849,9 @@ export const AdminDashboard: React.FC = () => {
 					<Tab label="Products" />
 					<Tab label="Orders" />
 					<Tab label="Users" />
+					<Tab label="Coupons" />
 				</Tabs>
 
-				{/* Products Tab */}
 				<TabPanel value={tabIndex} index={0}>
 					<Box
 						display="flex"
@@ -593,7 +962,6 @@ export const AdminDashboard: React.FC = () => {
 					)}
 				</TabPanel>
 
-				{/* Orders Tab */}
 				<TabPanel value={tabIndex} index={1}>
 					<Box px={3}>
 						<Typography variant="h6" fontWeight={700} mb={3}>
@@ -693,7 +1061,6 @@ export const AdminDashboard: React.FC = () => {
 					</Box>
 				</TabPanel>
 
-				{/* Users Tab */}
 				<TabPanel value={tabIndex} index={2}>
 					<Box px={3}>
 						<Box
@@ -797,6 +1164,93 @@ export const AdminDashboard: React.FC = () => {
 						)}
 					</Box>
 				</TabPanel>
+
+				<TabPanel value={tabIndex} index={3}>
+					<Box px={3}>
+						<Box
+							display="flex"
+							justifyContent="space-between"
+							alignItems="center"
+							mb={3}
+						>
+							<Typography variant="h6" fontWeight={700}>
+								Coupon Management
+							</Typography>
+							<Button
+								variant="contained"
+								startIcon={<AddIcon />}
+								onClick={() => setCouponDialogOpen(true)}
+							>
+								Add Coupon
+							</Button>
+						</Box>
+
+						{couponsLoading ? (
+							<TableContainer component={Paper}>
+								<Table>
+									<TableBody>
+										<TableSkeletonRows rows={6} cols={7} />
+									</TableBody>
+								</Table>
+							</TableContainer>
+						) : (
+							<TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+								<Table>
+									<TableHead sx={{ bgcolor: "action.hover" }}>
+										<TableRow>
+											<TableCell sx={{ fontWeight: 700 }}>Code</TableCell>
+											<TableCell sx={{ fontWeight: 700 }}>
+												Discount Type
+											</TableCell>
+											<TableCell sx={{ fontWeight: 700 }}>Value</TableCell>
+											<TableCell sx={{ fontWeight: 700 }}>Min Order</TableCell>
+											<TableCell sx={{ fontWeight: 700 }}>Expires</TableCell>
+											<TableCell sx={{ fontWeight: 700 }}>Usage</TableCell>
+											<TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+											<TableCell sx={{ fontWeight: 700 }}>Action</TableCell>
+										</TableRow>
+									</TableHead>
+									<TableBody>
+										{coupons.map((coupon) => (
+											<TableRow key={coupon._id} hover>
+												<TableCell>
+													<Typography variant="subtitle2" fontWeight={700}>
+														{coupon.code}
+													</Typography>
+												</TableCell>
+												<TableCell>Percentage</TableCell>
+												<TableCell>{coupon.discountPercent}%</TableCell>
+												<TableCell>${coupon.minOrderAmount}</TableCell>
+												<TableCell>
+													{new Date(coupon.expiresAt).toLocaleDateString()}
+												</TableCell>
+												<TableCell>
+													{coupon.usedCount}/{coupon.usageLimit || "∞"}
+												</TableCell>
+												<TableCell>
+													<Chip
+														label={coupon.isActive ? "Active" : "Inactive"}
+														color={coupon.isActive ? "success" : "default"}
+														size="small"
+													/>
+												</TableCell>
+												<TableCell>
+													<IconButton
+														size="small"
+														color="error"
+														onClick={() => setDeleteCouponId(coupon._id)}
+													>
+														<DeleteIcon />
+													</IconButton>
+												</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
+								</Table>
+							</TableContainer>
+						)}
+					</Box>
+				</TabPanel>
 			</Card>
 
 			{/* Product Dialog - Create/Edit */}
@@ -818,6 +1272,7 @@ export const AdminDashboard: React.FC = () => {
 							onChange={(e) =>
 								setProductForm({ ...productForm, name: e.target.value })
 							}
+							size="small"
 						/>
 						<TextField
 							fullWidth
@@ -828,9 +1283,10 @@ export const AdminDashboard: React.FC = () => {
 							onChange={(e) =>
 								setProductForm({ ...productForm, description: e.target.value })
 							}
+							size="small"
 						/>
 						<Grid container spacing={2}>
-							<Grid item xs={6}>
+							<Grid item xs={12} sm={6}>
 								<TextField
 									fullWidth
 									label="Price"
@@ -842,9 +1298,10 @@ export const AdminDashboard: React.FC = () => {
 											price: Number(e.target.value),
 										})
 									}
+									size="small"
 								/>
 							</Grid>
-							<Grid item xs={6}>
+							<Grid item xs={12} sm={6}>
 								<TextField
 									fullWidth
 									label="Stock"
@@ -856,31 +1313,59 @@ export const AdminDashboard: React.FC = () => {
 											stock: Number(e.target.value),
 										})
 									}
+									size="small"
 								/>
 							</Grid>
 						</Grid>
 						<Grid container spacing={2}>
-							<Grid item xs={6}>
-								<TextField
+							<Grid item xs={12} sm={6}>
+								<Autocomplete
 									fullWidth
-									label="Category"
+									freeSolo
+									options={categoryOptions}
 									value={productForm.category}
-									onChange={(e) =>
+									onChange={(_, value) =>
 										setProductForm({
 											...productForm,
-											category: e.target.value,
+											category: typeof value === "string" ? value : value || "",
 										})
 									}
+									onInputChange={(_, value) =>
+										setProductForm({ ...productForm, category: value })
+									}
+									renderInput={(params) => (
+										<TextField
+											{...params}
+											label="Category"
+											size="small"
+											placeholder="Select or add new"
+										/>
+									)}
 								/>
 							</Grid>
-							<Grid item xs={6}>
-								<TextField
+							<Grid item xs={12} sm={6}>
+								<Autocomplete
 									fullWidth
-									label="Brand"
+									freeSolo
+									options={brandOptions}
 									value={productForm.brand}
-									onChange={(e) =>
-										setProductForm({ ...productForm, brand: e.target.value })
+									onChange={(_, value) =>
+										setProductForm({
+											...productForm,
+											brand: typeof value === "string" ? value : value || "",
+										})
 									}
+									onInputChange={(_, value) =>
+										setProductForm({ ...productForm, brand: value })
+									}
+									renderInput={(params) => (
+										<TextField
+											{...params}
+											label="Brand"
+											size="small"
+											placeholder="Select or add new"
+										/>
+									)}
 								/>
 							</Grid>
 						</Grid>
@@ -891,6 +1376,7 @@ export const AdminDashboard: React.FC = () => {
 							onChange={(e) =>
 								setProductForm({ ...productForm, imageUrl: e.target.value })
 							}
+							size="small"
 						/>
 					</Stack>
 				</DialogContent>
@@ -1064,6 +1550,167 @@ export const AdminDashboard: React.FC = () => {
 				isLoading={deleteProductMutation.isPending}
 			/>
 
+			{/* Create Category/Brand Dialog */}
+			<Dialog
+				open={optionDialogOpen}
+				onClose={() => setOptionDialogOpen(false)}
+				fullWidth
+				maxWidth="xs"
+			>
+				<DialogTitle fontWeight={700}>
+					Add New {optionDialogType === "category" ? "Category" : "Brand"}
+				</DialogTitle>
+				<DialogContent>
+					<TextField
+						fullWidth
+						label="Name"
+						value={optionName}
+						onChange={(e) => setOptionName(e.target.value)}
+						size="small"
+						sx={{ mt: 1 }}
+					/>
+				</DialogContent>
+				<DialogActions sx={{ p: 3, pt: 0 }}>
+					<Button onClick={() => setOptionDialogOpen(false)} color="inherit">
+						Cancel
+					</Button>
+					<Button
+						variant="contained"
+						onClick={() => {
+							const trimmed = optionName.trim();
+							if (!trimmed) {
+								toast.error("Name is required");
+								return;
+							}
+							saveOptionMutation.mutate(trimmed);
+						}}
+						disabled={saveOptionMutation.isPending}
+					>
+						{saveOptionMutation.isPending ? "Saving..." : "Create"}
+					</Button>
+				</DialogActions>
+			</Dialog>
+
+			{/* Coupon Dialog */}
+			<Dialog
+				open={couponDialogOpen}
+				onClose={() => setCouponDialogOpen(false)}
+				fullWidth
+				maxWidth="md"
+			>
+				<DialogTitle fontWeight={700}>Create Coupon</DialogTitle>
+				<DialogContent>
+					<Grid container spacing={2} sx={{ mt: 0.5 }}>
+						<Grid item xs={12} sm={6}>
+							<TextField
+								fullWidth
+								label="Coupon Code"
+								value={couponForm.code}
+								onChange={(e) =>
+									setCouponForm({ ...couponForm, code: e.target.value })
+								}
+								size="small"
+							/>
+						</Grid>
+						<Grid item xs={12} sm={6}>
+							<TextField
+								fullWidth
+								type="number"
+								label="Discount %"
+								value={couponForm.discountPercent}
+								onChange={(e) =>
+									setCouponForm({
+										...couponForm,
+										discountPercent: Number(e.target.value),
+									})
+								}
+								size="small"
+							/>
+						</Grid>
+						<Grid item xs={12} sm={6}>
+							<TextField
+								fullWidth
+								type="number"
+								label="Minimum Order Amount"
+								value={couponForm.minOrderAmount}
+								onChange={(e) =>
+									setCouponForm({
+										...couponForm,
+										minOrderAmount: Number(e.target.value),
+									})
+								}
+								size="small"
+							/>
+						</Grid>
+						<Grid item xs={12} sm={6}>
+							<TextField
+								fullWidth
+								type="number"
+								label="Usage Limit"
+								value={couponForm.usageLimit}
+								onChange={(e) =>
+									setCouponForm({
+										...couponForm,
+										usageLimit: Number(e.target.value),
+									})
+								}
+								size="small"
+							/>
+						</Grid>
+						<Grid item xs={12} sm={6}>
+							<TextField
+								fullWidth
+								type="datetime-local"
+								label="Expires At"
+								value={couponForm.expiresAt}
+								onChange={(e) =>
+									setCouponForm({ ...couponForm, expiresAt: e.target.value })
+								}
+								size="small"
+							/>
+						</Grid>
+						<Grid item xs={12}>
+							<FormControlLabel
+								control={
+									<Switch
+										checked={couponForm.isActive}
+										onChange={(e) =>
+											setCouponForm({
+												...couponForm,
+												isActive: e.target.checked,
+											})
+										}
+									/>
+								}
+								label="Active"
+							/>
+						</Grid>
+					</Grid>
+				</DialogContent>
+				<DialogActions sx={{ p: 3, pt: 0 }}>
+					<Button onClick={() => setCouponDialogOpen(false)} color="inherit">
+						Cancel
+					</Button>
+					<Button
+						variant="contained"
+						onClick={() => {
+							if (!couponForm.code.trim()) {
+								toast.error("Coupon code is required");
+								return;
+							}
+							saveCouponMutation.mutate({
+								...couponForm,
+								code: couponForm.code.trim().toUpperCase(),
+								expiresAt: new Date(couponForm.expiresAt).toISOString(),
+							});
+						}}
+						disabled={saveCouponMutation.isPending}
+					>
+						{saveCouponMutation.isPending ? "Saving..." : "Save Coupon"}
+					</Button>
+				</DialogActions>
+			</Dialog>
+
 			{/* Delete User Confirmation */}
 			<ConfirmDialog
 				open={!!deleteUserId}
@@ -1074,6 +1721,18 @@ export const AdminDashboard: React.FC = () => {
 				}}
 				onCancel={() => setDeleteUserId(null)}
 				isLoading={deleteUserMutation.isPending}
+			/>
+
+			{/* Delete Coupon Confirmation */}
+			<ConfirmDialog
+				open={!!deleteCouponId}
+				title="Delete Coupon"
+				message="Are you sure you want to delete this coupon?"
+				onConfirm={() => {
+					if (deleteCouponId) deleteCouponMutation.mutate(deleteCouponId);
+				}}
+				onCancel={() => setDeleteCouponId(null)}
+				isLoading={deleteCouponMutation.isPending}
 			/>
 		</Box>
 	);

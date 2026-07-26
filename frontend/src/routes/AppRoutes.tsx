@@ -13,6 +13,7 @@ import { ResetPassword } from "../pages/ResetPassword";
 import { ProductDetail } from "../pages/ProductDetail";
 import { MyOrders } from "../pages/MyOrders";
 import { OrderDetail } from "../pages/OrderDetail";
+import { Wishlist } from "../pages/Wishlist";
 
 export const AppRoutes: React.FC = () => {
 	return (
@@ -31,6 +32,7 @@ export const AppRoutes: React.FC = () => {
 					<Route path="/cart" element={<Cart />} />
 					<Route path="/orders" element={<MyOrders />} />
 					<Route path="/orders/:id" element={<OrderDetail />} />
+					<Route path="/wishlist" element={<Wishlist />} />
 				</Route>
 
 				{/* Protected Admin Routes */}

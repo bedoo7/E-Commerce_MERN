@@ -14,6 +14,8 @@ import {
 	Divider,
 	IconButton,
 	TextField,
+	Rating,
+	Paper,
 } from "@mui/material";
 import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -21,16 +23,18 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import RemoveIcon from "@mui/icons-material/Remove";
 import AddIcon from "@mui/icons-material/Add";
 import { api } from "../api/axios";
-import { IProduct } from "../types";
+import { IProduct, IReviewResponse } from "../types";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 
 export const ProductDetail: React.FC = () => {
 	const { id } = useParams<{ id: string }>();
 	const navigate = useNavigate();
-	const { isAuthenticated } = useAuth();
+	const { isAuthenticated, user } = useAuth();
 	const queryClient = useQueryClient();
 	const [quantity, setQuantity] = useState(1);
+	const [reviewRating, setReviewRating] = useState(5);
+	const [reviewComment, setReviewComment] = useState("");
 
 	const {
 		data: product,
@@ -40,6 +44,15 @@ export const ProductDetail: React.FC = () => {
 		queryKey: ["product", id],
 		queryFn: async () => {
 			const res = await api.get<IProduct>(`/product/${id}`);
+			return res.data;
+		},
+		enabled: !!id,
+	});
+
+	const { data: reviewsData } = useQuery<IReviewResponse>({
+		queryKey: ["product-reviews", id],
+		queryFn: async () => {
+			const res = await api.get<IReviewResponse>(`/review/product/${id}`);
 			return res.data;
 		},
 		enabled: !!id,
@@ -68,6 +81,29 @@ export const ProductDetail: React.FC = () => {
 		},
 	});
 
+	const reviewMutation = useMutation({
+		mutationFn: async () => {
+			if (!id || !product) {
+				throw new Error("Unable to submit review");
+			}
+			const res = await api.post("/review", {
+				productId: product._id,
+				rating: reviewRating,
+				comment: reviewComment.trim(),
+			});
+			return res.data;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["product-reviews", id] });
+			setReviewComment("");
+			setReviewRating(5);
+			toast.success("Review posted successfully!");
+		},
+		onError: (err: any) => {
+			toast.error(err.message || "Failed to submit review");
+		},
+	});
+
 	const handleAddToCart = () => {
 		if (!isAuthenticated) {
 			toast.error("Please log in to add items to your cart");
@@ -75,6 +111,18 @@ export const ProductDetail: React.FC = () => {
 		}
 		if (!product) return;
 		addToCartMutation.mutate({ productId: product._id, quantity });
+	};
+
+	const handleReviewSubmit = () => {
+		if (!isAuthenticated) {
+			toast.error("Please log in to leave a review");
+			return;
+		}
+		if (!reviewComment.trim()) {
+			toast.error("Please write a review comment");
+			return;
+		}
+		reviewMutation.mutate();
 	};
 
 	if (isLoading) {
@@ -303,6 +351,173 @@ export const ProductDetail: React.FC = () => {
 					</Grid>
 				</Grid>
 			</Card>
+
+			<Box mt={4}>
+				<Card
+					sx={{
+						borderRadius: 4,
+						border: "1px solid",
+						borderColor: "divider",
+					}}
+				>
+					<CardMedia component="div" sx={{ p: 3 }}>
+						<Stack
+							direction={{ xs: "column", sm: "row" }}
+							alignItems={{ xs: "flex-start", sm: "center" }}
+							justifyContent="space-between"
+							spacing={2}
+						>
+							<Box>
+								<Typography variant="h5" fontWeight={800}>
+									Customer Reviews
+								</Typography>
+								<Typography variant="body2" color="text.secondary">
+									{reviewsData?.totalReviews ?? 0} verified review
+									{(reviewsData?.totalReviews ?? 0) === 1 ? "" : "s"}
+								</Typography>
+							</Box>
+							<Stack direction="row" alignItems="center" spacing={1}>
+								<Rating
+									value={reviewsData?.averageRating ?? 0}
+									precision={0.1}
+									readOnly
+									size="small"
+								/>
+								<Typography variant="h6" fontWeight={700}>
+									{(reviewsData?.averageRating ?? 0).toFixed(1)}
+								</Typography>
+							</Stack>
+						</Stack>
+					</CardMedia>
+					<Divider />
+					<Box sx={{ p: 3 }}>
+						<Grid container spacing={3}>
+							<Grid item xs={12} md={4}>
+								<Paper
+									elevation={0}
+									sx={{
+										p: 2,
+										borderRadius: 3,
+										border: "1px solid",
+										borderColor: "divider",
+										bgcolor: "background.default",
+									}}
+								>
+									<Typography variant="subtitle2" color="text.secondary" mb={1}>
+										Review Summary
+									</Typography>
+									<Typography variant="h3" fontWeight={800}>
+										{(reviewsData?.averageRating ?? 0).toFixed(1)}
+									</Typography>
+									<Rating
+										value={reviewsData?.averageRating ?? 0}
+										precision={0.1}
+										readOnly
+										sx={{ mt: 1 }}
+									/>
+									<Typography variant="body2" color="text.secondary" mt={1}>
+										Based on {reviewsData?.totalReviews ?? 0} review
+										{(reviewsData?.totalReviews ?? 0) === 1 ? "" : "s"}
+									</Typography>
+								</Paper>
+							</Grid>
+
+							<Grid item xs={12} md={8}>
+								{isAuthenticated ? (
+									<Box
+										sx={{
+											p: 1.5,
+											borderRadius: 3,
+											border: "1px solid",
+											borderColor: "divider",
+										}}
+									>
+										<Typography variant="subtitle1" fontWeight={700} mb={1.5}>
+											Write a Review
+										</Typography>
+										<Stack spacing={2}>
+											<Stack direction="row" alignItems="center" spacing={1}>
+												<Typography variant="body2" color="text.secondary">
+													Your rating:
+												</Typography>
+												<Rating
+													value={reviewRating}
+													onChange={(_, value) => setReviewRating(value || 5)}
+												/>
+											</Stack>
+											<TextField
+												fullWidth
+												multiline
+												rows={4}
+												label="Share your experience"
+												value={reviewComment}
+												onChange={(e) => setReviewComment(e.target.value)}
+											/>
+											<Button
+												variant="contained"
+												onClick={handleReviewSubmit}
+												disabled={
+													reviewMutation.isPending || !reviewComment.trim()
+												}
+											>
+												{reviewMutation.isPending
+													? "Posting..."
+													: "Post Review"}
+											</Button>
+										</Stack>
+									</Box>
+								) : (
+									<Typography variant="body2" color="text.secondary">
+										Please log in to leave a review for this product.
+									</Typography>
+								)}
+							</Grid>
+						</Grid>
+
+						<Stack spacing={2} mt={3}>
+							{(reviewsData?.reviews ?? []).length === 0 ? (
+								<Typography variant="body2" color="text.secondary">
+									No reviews yet. Be the first to share your thoughts.
+								</Typography>
+							) : (
+								(reviewsData?.reviews ?? []).map((review) => {
+									const reviewerName =
+										typeof review.userId === "string"
+											? "Verified customer"
+											: `${review.userId.firstName} ${review.userId.lastName}`;
+
+									return (
+										<Box
+											key={review._id}
+											sx={{
+												p: 2,
+												borderRadius: 3,
+												border: "1px solid",
+												borderColor: "divider",
+											}}
+										>
+											<Stack
+												direction="row"
+												justifyContent="space-between"
+												alignItems="center"
+												spacing={1}
+											>
+												<Typography variant="subtitle1" fontWeight={700}>
+													{reviewerName}
+												</Typography>
+												<Rating value={review.rating} readOnly size="small" />
+											</Stack>
+											<Typography variant="body2" color="text.secondary" mt={1}>
+												{review.comment}
+											</Typography>
+										</Box>
+									);
+								})
+							)}
+						</Stack>
+					</Box>
+				</Card>
+			</Box>
 		</Box>
 	);
 };

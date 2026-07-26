@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
 	Grid,
@@ -18,20 +18,43 @@ import SearchIcon from "@mui/icons-material/Search";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import CloseIcon from "@mui/icons-material/Close";
 import { api } from "../api/axios";
-import { IProduct, IPaginatedResponse, ICart } from "../types";
+import { IProduct, IPaginatedResponse, ICart, IWishlist } from "../types";
 import { ProductCard } from "../components/product/ProductCard";
 import { PaginationComponent } from "../components/common/PaginationComponent";
 import { ProductSkeletonGrid } from "../components/common/LoadingSkeletons";
 import { EmptyState } from "../components/common/EmptyState";
 import { useAuth } from "../context/AuthContext";
+import { useSearchParams } from "react-router-dom";
 import { useDebounce } from "../hooks/useDebounce";
 import toast from "react-hot-toast";
 
+const isProductWithId = (value: unknown): value is { _id: string } => {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"_id" in value &&
+		typeof (value as { _id?: unknown })._id === "string"
+	);
+};
+
+const getProductId = (
+	product: IProduct | string | null | undefined,
+): string | null => {
+	if (typeof product === "string") {
+		return product;
+	}
+
+	if (isProductWithId(product)) {
+		return product._id;
+	}
+
+	return null;
+};
+
 export const Home: React.FC = () => {
+	const [searchParams] = useSearchParams();
 	const { isAuthenticated } = useAuth();
 	const queryClient = useQueryClient();
-
-	// Filter states
 	const [search, setSearch] = useState("");
 	const [category, setCategory] = useState("All");
 	const [brand, setBrand] = useState("All");
@@ -41,12 +64,21 @@ export const Home: React.FC = () => {
 	const [maxPrice, setMaxPrice] = useState("");
 	const [inStock, setInStock] = useState(false);
 	const [page, setPage] = useState(1);
+	const [limit, setLimit] = useState(12);
 	const [showFilters, setShowFilters] = useState(false);
-	const limit = 12;
-
 	const debouncedSearch = useDebounce(search, 400);
 
-	// Fetch products with server-side pagination & filters
+	// Keep the local filter state in sync with footer navigation links
+	useEffect(() => {
+		const cat = searchParams.get("category");
+		const brandParam = searchParams.get("brand");
+
+		setCategory(cat && cat !== "All" ? cat : "All");
+		setBrand(brandParam && brandParam !== "All" ? brandParam : "All");
+		setPage(1);
+		setShowFilters(Boolean(cat || brandParam));
+	}, [searchParams]);
+
 	const {
 		data: productsData,
 		isLoading,
@@ -55,6 +87,7 @@ export const Home: React.FC = () => {
 		queryKey: [
 			"products",
 			page,
+			limit,
 			debouncedSearch,
 			category,
 			brand,
@@ -76,15 +109,13 @@ export const Home: React.FC = () => {
 			if (inStock) params.set("inStock", "true");
 			params.set("sortBy", sortBy);
 			params.set("sortOrder", sortOrder);
-
 			const res = await api.get<IPaginatedResponse<IProduct>>(
-				`/product?${params.toString()}`,
+				"/product?" + params.toString(),
 			);
 			return res.data;
 		},
 	});
 
-	// Fetch categories & brands for filter dropdowns
 	const { data: categories = [] } = useQuery<string[]>({
 		queryKey: ["categories"],
 		queryFn: async () => {
@@ -103,16 +134,12 @@ export const Home: React.FC = () => {
 		staleTime: 1000 * 60 * 10,
 	});
 
-	// Add to cart mutation
 	const addToCartMutation = useMutation({
-		mutationFn: async ({
-			productId,
-			quantity,
-		}: {
-			productId: string;
-			quantity: number;
-		}) => {
-			const res = await api.post("/cart/items", { productId, quantity });
+		mutationFn: async (input: { productId: string; quantity: number }) => {
+			const res = await api.post("/cart/items", {
+				productId: input.productId,
+				quantity: input.quantity,
+			});
 			return res.data;
 		},
 		onSuccess: () => {
@@ -124,16 +151,12 @@ export const Home: React.FC = () => {
 		},
 	});
 
-	// Update quantity mutation
 	const updateQuantityMutation = useMutation({
-		mutationFn: async ({
-			productId,
-			quantity,
-		}: {
-			productId: string;
-			quantity: number;
-		}) => {
-			const res = await api.put("/cart/items", { productId, quantity });
+		mutationFn: async (input: { productId: string; quantity: number }) => {
+			const res = await api.put("/cart/items", {
+				productId: input.productId,
+				quantity: input.quantity,
+			});
 			return res.data;
 		},
 		onSuccess: () => {
@@ -144,22 +167,20 @@ export const Home: React.FC = () => {
 		},
 	});
 
-	// Remove item mutation
 	const removeItemMutation = useMutation({
 		mutationFn: async (productId: string) => {
-			const res = await api.delete(`/cart/items/${productId}`);
+			const res = await api.delete("/cart/items/" + productId);
 			return res.data;
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["cart"] });
-			toast.success("Item removed from cart");
+			toast.success("Item removed");
 		},
 		onError: (err: any) => {
 			toast.error(err.message || "Failed to remove item");
 		},
 	});
 
-	// Fetch active cart for inline quantity controls
 	const { data: cart } = useQuery<ICart>({
 		queryKey: ["cart"],
 		queryFn: async () => {
@@ -170,32 +191,46 @@ export const Home: React.FC = () => {
 		staleTime: 1000 * 30,
 	});
 
+	const { data: wishlistData } = useQuery<IWishlist>({
+		queryKey: ["wishlist"],
+		queryFn: async () => {
+			const res = await api.get<IWishlist>("/wishlist");
+			return res.data;
+		},
+		enabled: isAuthenticated,
+		staleTime: 1000 * 30,
+	});
+
+	const wishlistProductIds = new Set<string>();
+	for (const item of wishlistData?.items ?? []) {
+		const productId = getProductId(item.product);
+		if (productId) {
+			wishlistProductIds.add(productId);
+		}
+	}
+
 	const handleAddToCart = (productId: string) => {
 		if (!isAuthenticated) {
-			toast.error("Please log in to add items to your cart");
+			toast.error("Please log in first");
 			return;
 		}
 		addToCartMutation.mutate({ productId, quantity: 1 });
 	};
-
-	const handleUpdateQuantity = (productId: string, quantity: number) => {
+	const handleUpdateQuantity = (productId: string, quantity: number) =>
 		updateQuantityMutation.mutate({ productId, quantity });
-	};
-
-	const handleRemoveItem = (productId: string) => {
+	const handleRemoveItem = (productId: string) =>
 		removeItemMutation.mutate(productId);
-	};
 
 	const products = productsData?.data ?? [];
 	const pagination = productsData?.pagination;
 
-	// Build a map of productId -> quantity from cart for inline controls
 	const cartItemMap: Record<string, number> = {};
 	if (cart?.items) {
 		for (const item of cart.items) {
-			const productId =
-				typeof item.product === "string" ? item.product : item.product._id;
-			cartItemMap[productId] = item.quantity;
+			const pid = getProductId(item.product);
+			if (pid) {
+				cartItemMap[pid] = item.quantity;
+			}
 		}
 	}
 
@@ -223,7 +258,7 @@ export const Home: React.FC = () => {
 		return (
 			<Box textAlign="center" py={5}>
 				<Typography color="error" variant="h6">
-					Failed to load products. Please try again later.
+					Failed to load products.
 				</Typography>
 			</Box>
 		);
@@ -231,24 +266,21 @@ export const Home: React.FC = () => {
 
 	return (
 		<Box>
-			{/* Premium Hero Section */}
+			{/* Hero */}
 			<Box
 				sx={{
 					position: "relative",
 					overflow: "hidden",
 					borderRadius: 4,
-					mb: 5,
-					background: (theme) =>
-						theme.palette.mode === "light"
+					mb: 4,
+					background: (t: any) =>
+						t.palette.mode === "light"
 							? "linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%)"
 							: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #831843 100%)",
 					"&::before": {
-						content: '""',
+						content: "''",
 						position: "absolute",
-						top: 0,
-						left: 0,
-						right: 0,
-						bottom: 0,
+						inset: 0,
 						background:
 							"radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%)",
 					},
@@ -258,7 +290,7 @@ export const Home: React.FC = () => {
 					sx={{
 						position: "relative",
 						zIndex: 1,
-						py: { xs: 6, md: 8 },
+						py: { xs: 5, md: 7 },
 						px: { xs: 3, md: 6 },
 						textAlign: "center",
 					}}
@@ -268,8 +300,8 @@ export const Home: React.FC = () => {
 						fontWeight={800}
 						color="#fff"
 						sx={{
-							fontSize: { xs: "2rem", sm: "2.5rem", md: "3.5rem" },
-							mb: 2,
+							fontSize: { xs: "1.8rem", md: "3rem" },
+							mb: 1.5,
 							letterSpacing: "-0.03em",
 						}}
 					>
@@ -279,23 +311,20 @@ export const Home: React.FC = () => {
 						variant="h6"
 						sx={{
 							color: "rgba(255,255,255,0.85)",
-							maxWidth: 600,
+							maxWidth: 560,
 							mx: "auto",
-							mb: 4,
-							fontSize: { xs: "1rem", md: "1.2rem" },
+							mb: 3,
 							fontWeight: 400,
 						}}
 					>
 						Curated selection of the finest electronics, gadgets, and
-						accessories — engineered for excellence.
+						accessories.
 					</Typography>
-					<Box
-						sx={{
-							display: "flex",
-							gap: 2,
-							justifyContent: "center",
-							flexWrap: "wrap",
-						}}
+					<Stack
+						direction="row"
+						spacing={1.5}
+						justifyContent="center"
+						flexWrap="wrap"
 					>
 						{[
 							{ label: "Free Shipping", desc: "On orders $50+" },
@@ -305,29 +334,38 @@ export const Home: React.FC = () => {
 							<Box
 								key={item.label}
 								sx={{
-									px: 3,
-									py: 1.5,
-									borderRadius: 3,
+									px: 2.5,
+									py: 1.2,
+									borderRadius: 2.5,
 									bgcolor: "rgba(255,255,255,0.12)",
 									backdropFilter: "blur(10px)",
 									border: "1px solid rgba(255,255,255,0.2)",
 									textAlign: "center",
 								}}
 							>
-								<Typography variant="subtitle2" fontWeight={700} color="#fff">
+								<Typography
+									variant="subtitle2"
+									fontWeight={700}
+									color="#fff"
+									fontSize="0.85rem"
+								>
 									{item.label}
 								</Typography>
-								<Typography variant="caption" color="rgba(255,255,255,0.7)">
+								<Typography
+									variant="caption"
+									color="rgba(255,255,255,0.7)"
+									fontSize="0.72rem"
+								>
 									{item.desc}
 								</Typography>
 							</Box>
 						))}
-					</Box>
+					</Stack>
 				</Box>
 			</Box>
 
-			{/* Search and Filter Controls */}
-			<Box mb={4}>
+			{/* Search & Filter */}
+			<Box sx={{ mb: 4 }}>
 				<Stack
 					direction={{ xs: "column", sm: "row" }}
 					spacing={2}
@@ -335,7 +373,7 @@ export const Home: React.FC = () => {
 				>
 					<TextField
 						fullWidth
-						placeholder="Search products, brands, categories..."
+						placeholder="Search products..."
 						value={search}
 						onChange={(e) => {
 							setSearch(e.target.value);
@@ -348,16 +386,14 @@ export const Home: React.FC = () => {
 								</InputAdornment>
 							),
 						}}
-						sx={{
-							"& .MuiOutlinedInput-root": {
-								bgcolor: "background.paper",
-							},
-						}}
+						size="small"
+						sx={{ "& .MuiOutlinedInput-root": { bgcolor: "background.paper" } }}
 					/>
-					<Stack direction="row" spacing={1}>
+					<Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
 						<IconButton
 							onClick={() => setShowFilters(!showFilters)}
 							color={showFilters ? "primary" : "default"}
+							size="small"
 							sx={{
 								border: "1px solid",
 								borderColor: "divider",
@@ -370,6 +406,7 @@ export const Home: React.FC = () => {
 							<IconButton
 								onClick={resetFilters}
 								color="error"
+								size="small"
 								sx={{
 									border: "1px solid",
 									borderColor: "divider",
@@ -386,7 +423,7 @@ export const Home: React.FC = () => {
 					<Box
 						sx={{
 							mt: 2,
-							p: 3,
+							p: 2.5,
 							borderRadius: 3,
 							border: "1px solid",
 							borderColor: "divider",
@@ -406,10 +443,10 @@ export const Home: React.FC = () => {
 									}}
 									size="small"
 								>
-									<MenuItem value="All">All Categories</MenuItem>
-									{categories.map((cat) => (
-										<MenuItem key={cat} value={cat}>
-											{cat}
+									<MenuItem value="All">All</MenuItem>
+									{categories.map((c) => (
+										<MenuItem key={c} value={c}>
+											{c}
 										</MenuItem>
 									))}
 								</TextField>
@@ -426,7 +463,7 @@ export const Home: React.FC = () => {
 									}}
 									size="small"
 								>
-									<MenuItem value="All">All Brands</MenuItem>
+									<MenuItem value="All">All</MenuItem>
 									{brands.map((b) => (
 										<MenuItem key={b} value={b}>
 											{b}
@@ -437,7 +474,7 @@ export const Home: React.FC = () => {
 							<Grid item xs={6} sm={2}>
 								<TextField
 									fullWidth
-									label="Min Price"
+									label="Min $"
 									value={minPrice}
 									onChange={(e) => {
 										setMinPrice(e.target.value);
@@ -450,7 +487,7 @@ export const Home: React.FC = () => {
 							<Grid item xs={6} sm={2}>
 								<TextField
 									fullWidth
-									label="Max Price"
+									label="Max $"
 									value={maxPrice}
 									onChange={(e) => {
 										setMaxPrice(e.target.value);
@@ -462,10 +499,10 @@ export const Home: React.FC = () => {
 							</Grid>
 							<Grid item xs={6} sm={2}>
 								<FormControl fullWidth size="small">
-									<InputLabel>Sort By</InputLabel>
+									<InputLabel>Sort</InputLabel>
 									<Select
 										value={sortBy}
-										label="Sort By"
+										label="Sort"
 										onChange={(e) => {
 											setSortBy(e.target.value);
 											setPage(1);
@@ -474,7 +511,6 @@ export const Home: React.FC = () => {
 										<MenuItem value="createdAt">Newest</MenuItem>
 										<MenuItem value="price">Price</MenuItem>
 										<MenuItem value="name">Name</MenuItem>
-										<MenuItem value="stock">Stock</MenuItem>
 									</Select>
 								</FormControl>
 							</Grid>
@@ -489,8 +525,8 @@ export const Home: React.FC = () => {
 											setPage(1);
 										}}
 									>
-										<MenuItem value="desc">High to Low</MenuItem>
-										<MenuItem value="asc">Low to High</MenuItem>
+										<MenuItem value="desc">High-Low</MenuItem>
+										<MenuItem value="asc">Low-High</MenuItem>
 									</Select>
 								</FormControl>
 							</Grid>
@@ -515,12 +551,12 @@ export const Home: React.FC = () => {
 				</Collapse>
 			</Box>
 
-			{/* Products Grid */}
+			{/* Products */}
 			{isLoading ? (
 				<ProductSkeletonGrid count={6} />
 			) : products.length > 0 ? (
 				<>
-					<Grid container spacing={3}>
+					<Grid container spacing={2.5}>
 						{products.map((product) => (
 							<Grid item xs={12} sm={6} md={4} lg={3} key={product._id}>
 								<ProductCard
@@ -534,16 +570,19 @@ export const Home: React.FC = () => {
 										updateQuantityMutation.isPending ||
 										removeItemMutation.isPending
 									}
+									inWishlist={wishlistProductIds.has(product._id)}
 								/>
 							</Grid>
 						))}
 					</Grid>
-
 					{pagination && (
 						<PaginationComponent
 							pagination={pagination}
 							onPageChange={setPage}
-							onLimitChange={() => {}}
+							onLimitChange={(l) => {
+								setLimit(l);
+								setPage(1);
+							}}
 						/>
 					)}
 				</>
@@ -552,11 +591,9 @@ export const Home: React.FC = () => {
 					title="No products found"
 					description={
 						hasActiveFilters
-							? "Try adjusting your filters or search criteria."
-							: "No products are available at the moment."
+							? "Try adjusting filters."
+							: "No products available."
 					}
-					actionText={hasActiveFilters ? "Clear Filters" : undefined}
-					onAction={hasActiveFilters ? resetFilters : undefined}
 				/>
 			)}
 		</Box>

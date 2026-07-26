@@ -1,51 +1,30 @@
-# E-Commerce Elevation - Complete ✅
+# Remaining Tasks - Implementation Plan
 
-## Phase 1: Backend Improvements
+## Task 1: Admin Forms Alignment (HIGH)
 
-- ✅ Fixed `getmebytoken` double-response bug
-- ✅ Added stock decrement on checkout
-- ✅ Added admin user CRUD endpoints (update, delete, toggle active)
-- ✅ Added `isActive` field to User model for blocking/unblocking
-- ✅ Order status field with 5 states and validation
+- **AdminDashboard.tsx**: Polish Product Dialog (autocomplete, 2-column, consistent spacing)
+- **AdminDashboard.tsx**: Polish User Dialog (consistent spacing, same styling pattern)
 
-## Phase 2: Admin Dashboard Overhaul
+## Task 2: Category & Brand Management
 
-- ✅ Dashboard Overview with stats cards (users, products, orders)
-- ✅ Products tab: table, image preview, create/edit/delete with ConfirmDialog
-- ✅ Orders tab: status chips, update status dialog, filter by status
-- ✅ Users tab: create/edit/delete with dialogs, role management, pagination
-- ✅ Confirmation dialogs before all delete operations
-- ✅ Professional stats cards with icons and hover effects
+- **AdminDashboard.tsx**: Replace text inputs with Autocomplete (freeSolo) for Category/Brand
+- **AdminDashboard.tsx**: Add "+ Add New" quick-create dialogs
+- **AdminDashboard.tsx**: Fetch categories/brands from `/category` and `/brand` endpoints
 
-## Phase 3: Home/Product Page Polish
+## Task 3: Footer Links (already working with React Router)
 
-- ✅ Premium hero section with gradient background + floating trust badges
-- ✅ Filter sidebar with category, brand, price range, sort, stock filter
-- ✅ Server-side pagination, search, filtering
-- ✅ Premium product cards with hover effects
+- Layout.tsx footer links already use `component={Link} to="/?category=Phones"` - need to verify Home.tsx reads URL params
 
-## Phase 4: Cart & Product Detail
+## Task 4: Reviews Frontend
 
-- ✅ Inline quantity controls on product cards (add/remove)
-- ✅ Cart badge showing item count from React Query cache
-- ✅ Product detail page with image gallery, quantity selector, related products
+- **ProductDetail.tsx**: Add review section (average rating, stars, review list, submit form)
 
-## Phase 5: UI/UX Polish
+## Task 5: Coupons Frontend
 
-- ✅ Custom scrollbar styling
-- ✅ Fade-in animations
-- ✅ Clean global CSS (removed Vite boilerplate)
-- ✅ Better empty states and error states
-- ✅ Premium footer with links and branding
+- **Cart.tsx**: Add coupon input + apply button
+- **AdminDashboard.tsx**: Add Coupons tab (list, create, delete)
 
-## Phase 6: Bug Fixes
+## Task 6: Final Verification
 
-- ✅ Fixed `status.toUpperCase()` crash on old orders (backend fallback + frontend optional chaining)
-- ✅ Fixed Express v5 param types in productRoutes
-- ✅ Fixed orderService IOrder type mismatch
-- ✅ Fixed Add-to-Cart navigating away (removed wrapper div, added stopPropagation)
-
-## Compilation Status
-
-- ✅ Frontend: `npx tsc --noEmit` → EXIT_CODE=0
-- ✅ Backend: `npx tsc --noEmit` → EXIT_CODE=0
+- TypeScript compilation
+- Test all features
