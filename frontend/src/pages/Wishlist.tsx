@@ -179,8 +179,8 @@ export const Wishlist: React.FC = () => {
 									<IconButton
 										sx={{
 											position: "absolute",
-											top: 8,
-											right: 8,
+											top: 16,
+											right: 20,
 											bgcolor: "rgba(255,255,255,0.9)",
 											"&:hover": { bgcolor: "#fff" },
 										}}

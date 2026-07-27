@@ -1,30 +1,37 @@
-# Remaining Tasks - Implementation Plan
+# Implementation Tasks
 
-## Task 1: Admin Forms Alignment (HIGH)
+## Issue 1: Remove maxDiscountAmount (Dead Code)
 
-- **AdminDashboard.tsx**: Polish Product Dialog (autocomplete, 2-column, consistent spacing)
-- **AdminDashboard.tsx**: Polish User Dialog (consistent spacing, same styling pattern)
+- [ ] Remove `maxDiscountAmount` from `backend/src/models/couponModel.ts`
+- [ ] Remove `maxDiscountAmount` check from `backend/src/services/cartService.ts`
+- [ ] Remove `maxDiscountAmount` from `frontend/src/types/index.ts` (ICoupon)
 
-## Task 2: Category & Brand Management
+## Issue 2: Production Order Number
 
-- **AdminDashboard.tsx**: Replace text inputs with Autocomplete (freeSolo) for Category/Brand
-- **AdminDashboard.tsx**: Add "+ Add New" quick-create dialogs
-- **AdminDashboard.tsx**: Fetch categories/brands from `/category` and `/brand` endpoints
+- [ ] Add `orderNumber` field to `backend/src/models/orderModel.ts`
+- [ ] Generate orderNumber in checkout (`backend/src/services/cartService.ts`) using counter pattern
+- [ ] Add auto-migration script for existing orders without orderNumber
+- [ ] Update `frontend/src/pages/Cart.tsx` to display `order.orderNumber`
+- [ ] Update `frontend/src/pages/OrderDetail.tsx` to display `order.orderNumber`
+- [ ] Update `frontend/src/pages/MyOrders.tsx` to display `order.orderNumber`
+- [ ] Update `frontend/src/pages/AdminDashboard.tsx` to display `order.orderNumber`
 
-## Task 3: Footer Links (already working with React Router)
+## Issue 3: Coupon Usage Per User
 
-- Layout.tsx footer links already use `component={Link} to="/?category=Phones"` - need to verify Home.tsx reads URL params
+- [ ] Add `usedBy` array to `backend/src/models/couponModel.ts`
+- [ ] Update `backend/src/services/couponService.ts` validateCoupon to check per-user limit
+- [ ] Update `backend/src/services/cartService.ts` checkout to increment per-user usage after order created
 
-## Task 4: Reviews Frontend
+## Issue 4: Cart UX - Hide Discount -0
 
-- **ProductDetail.tsx**: Add review section (average rating, stars, review list, submit form)
+- [ ] In `frontend/src/pages/Cart.tsx`, wrap Order Summary Discount row with `{discountAmount > 0 && (...)}`
 
-## Task 5: Coupons Frontend
+## Issue 5: Verification
 
-- **Cart.tsx**: Add coupon input + apply button
-- **AdminDashboard.tsx**: Add Coupons tab (list, create, delete)
-
-## Task 6: Final Verification
-
-- TypeScript compilation
-- Test all features
+- [ ] TypeScript compilation check (backend + frontend)
+- [ ] Verify coupon validation flow
+- [ ] Verify checkout (with and without coupon)
+- [ ] Verify order success screen
+- [ ] Verify order details
+- [ ] Verify my orders list
+- [ ] Verify admin orders

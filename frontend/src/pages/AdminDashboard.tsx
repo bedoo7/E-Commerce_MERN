@@ -1001,7 +1001,7 @@ export const AdminDashboard: React.FC = () => {
 																fontWeight={600}
 																sx={{ fontFamily: "monospace" }}
 															>
-																#{order._id.slice(-8).toUpperCase()}
+																#{order.orderNumber}
 															</Typography>
 														</TableCell>
 														<TableCell>
@@ -1406,7 +1406,7 @@ export const AdminDashboard: React.FC = () => {
 					{selectedOrder && (
 						<Box mt={1}>
 							<Typography variant="body2" color="text.secondary" mb={2}>
-								Order #{selectedOrder._id.slice(-8).toUpperCase()}
+								Order #{selectedOrder.orderNumber}
 							</Typography>
 							<TextField
 								fullWidth

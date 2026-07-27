@@ -17,7 +17,8 @@ router.post("/validate", authenticate, async (req: any, res) => {
 		if (!code) {
 			return res.status(400).json({ message: "Coupon code is required" });
 		}
-		const result = await validateCoupon(code, orderAmount || 0);
+		const userId = req.user?.id;
+		const result = await validateCoupon(code, orderAmount || 0, userId);
 		res.status(200).json(result);
 	} catch (error: any) {
 		res.status(400).json({ message: error.message });

@@ -54,9 +54,14 @@ export interface IOrderItem {
 
 export interface IOrder {
 	_id: string;
+	orderNumber: string;
 	userId: string | IUser;
 	orderItems: IOrderItem[];
 	totalAmount: number;
+	subtotal: number;
+	discount: number;
+	couponCode?: string;
+	couponPercent?: number;
 	address: string;
 	status: OrderStatus;
 	createdAt?: string;
@@ -142,6 +147,7 @@ export interface ICoupon {
 	expiresAt: string;
 	usageLimit: number;
 	usedCount: number;
+	usedBy?: { userId: string; count: number }[];
 	isActive: boolean;
 	createdAt?: string;
 	updatedAt?: string;

@@ -139,7 +139,7 @@ export const MyOrders: React.FC = () => {
 												fontWeight={600}
 												sx={{ fontFamily: "monospace" }}
 											>
-												#{order._id.slice(-8).toUpperCase()}
+												#{order.orderNumber}
 											</Typography>
 										</TableCell>
 										<TableCell>

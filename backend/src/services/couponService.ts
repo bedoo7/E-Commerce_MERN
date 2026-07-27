@@ -8,7 +8,11 @@ const normalizeCouponDiscountType = (coupon: ICoupon) => {
 	return "percentage";
 };
 
-export const validateCoupon = async (code: string, orderAmount: number) => {
+export const validateCoupon = async (
+	code: string,
+	orderAmount: number,
+	userId?: string,
+) => {
 	try {
 		const coupon = await couponModel.findOne({
 			code: code.toUpperCase(),
@@ -23,8 +27,14 @@ export const validateCoupon = async (code: string, orderAmount: number) => {
 			throw new Error("Coupon has expired");
 		}
 
-		if (coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) {
-			throw new Error("Coupon usage limit reached");
+		// Check per-user usage limit (NOT global - each user can use it independently)
+		if (userId) {
+			const userEntry = (coupon.usedBy || []).find(
+				(u: any) => String(u.userId) === String(userId),
+			);
+			if (userEntry && userEntry.count >= 1) {
+				throw new Error("You have already used this coupon");
+			}
 		}
 
 		if (orderAmount < coupon.minOrderAmount) {

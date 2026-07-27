@@ -102,7 +102,7 @@ export const OrderDetail: React.FC = () => {
 					>
 						<Box>
 							<Typography variant="h5" fontWeight={800} gutterBottom>
-								Order #{order._id.slice(-8).toUpperCase()}
+								Order #{order.orderNumber}
 							</Typography>
 							<Typography variant="body2" color="text.secondary">
 								Placed on{" "}
@@ -194,9 +194,23 @@ export const OrderDetail: React.FC = () => {
 										Subtotal
 									</Typography>
 									<Typography variant="body2" fontWeight={600}>
-										${order.totalAmount}
+										${order.subtotal ?? order.totalAmount}
 									</Typography>
 								</Box>
+								{order.discount > 0 && (
+									<Box display="flex" justifyContent="space-between">
+										<Typography variant="body2" color="text.secondary">
+											Discount{order.couponCode ? ` (${order.couponCode})` : ""}
+										</Typography>
+										<Typography
+											variant="body2"
+											color="error.main"
+											fontWeight={600}
+										>
+											-${order.discount}
+										</Typography>
+									</Box>
+								)}
 								<Box display="flex" justifyContent="space-between">
 									<Typography variant="body2" color="text.secondary">
 										Shipping
@@ -211,7 +225,7 @@ export const OrderDetail: React.FC = () => {
 								</Box>
 								<Divider />
 								<Box display="flex" justifyContent="space-between">
-									<Typography fontWeight={700}>Total</Typography>
+									<Typography fontWeight={700}>Total Paid</Typography>
 									<Typography fontWeight={800} color="primary">
 										${order.totalAmount}
 									</Typography>

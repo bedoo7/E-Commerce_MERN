@@ -238,15 +238,43 @@ export const Cart: React.FC = () => {
 						fontWeight={700}
 						sx={{ fontFamily: "monospace" }}
 					>
-						#{successOrder._id.slice(-8).toUpperCase()}
+						#
+						{successOrder.orderNumber ||
+							successOrder._id.slice(-8).toUpperCase()}
 					</Typography>
 					<Divider sx={{ my: 2 }} />
-					<Typography variant="subtitle2" color="text.secondary" mb={1}>
-						Total Paid
-					</Typography>
-					<Typography variant="h5" color="primary" fontWeight={800}>
-						${successOrder.totalAmount}
-					</Typography>
+					<Stack spacing={1}>
+						<Box display="flex" justifyContent="space-between">
+							<Typography variant="body2" color="text.secondary">
+								Subtotal
+							</Typography>
+							<Typography variant="body2" fontWeight={600}>
+								${successOrder.subtotal ?? successOrder.totalAmount}
+							</Typography>
+						</Box>
+						{successOrder.discount > 0 && (
+							<Box display="flex" justifyContent="space-between">
+								<Typography variant="body2" color="text.secondary">
+									Discount
+									{successOrder.couponCode
+										? ` (${successOrder.couponCode})`
+										: ""}
+								</Typography>
+								<Typography variant="body2" color="error.main" fontWeight={600}>
+									-${successOrder.discount}
+								</Typography>
+							</Box>
+						)}
+						<Divider />
+						<Box display="flex" justifyContent="space-between">
+							<Typography variant="body1" fontWeight={700}>
+								Total Paid
+							</Typography>
+							<Typography variant="h5" color="primary" fontWeight={800}>
+								${successOrder.totalAmount}
+							</Typography>
+						</Box>
+					</Stack>
 				</Paper>
 				<Stack direction="row" spacing={2} justifyContent="center">
 					<Button
@@ -524,18 +552,20 @@ export const Cart: React.FC = () => {
 											FREE
 										</Typography>
 									</Box>
-									<Box display="flex" justifyContent="space-between">
-										<Typography variant="body1" color="text.secondary">
-											Discount
-										</Typography>
-										<Typography
-											variant="body1"
-											color="success.main"
-											fontWeight={700}
-										>
-											-{discountAmount.toLocaleString()}
-										</Typography>
-									</Box>
+									{discountAmount > 0 && (
+										<Box display="flex" justifyContent="space-between">
+											<Typography variant="body1" color="text.secondary">
+												Discount
+											</Typography>
+											<Typography
+												variant="body1"
+												color="success.main"
+												fontWeight={700}
+											>
+												-{discountAmount.toLocaleString()}
+											</Typography>
+										</Box>
+									)}
 									<Box display="flex" justifyContent="space-between">
 										<Typography variant="body1" color="text.secondary">
 											Tax
@@ -548,7 +578,7 @@ export const Cart: React.FC = () => {
 								<Divider sx={{ my: 2 }} />
 								<Box sx={{ mb: 2.5 }}>
 									<Typography variant="body2" color="text.secondary" mb={1}>
-										Apply coupon code
+										{couponApplied ? "Coupon applied" : "Apply coupon code"}
 									</Typography>
 									<Stack direction="row" spacing={1}>
 										<TextField
@@ -557,18 +587,32 @@ export const Cart: React.FC = () => {
 											placeholder="SAVE10"
 											value={couponCode}
 											onChange={(e) => setCouponCode(e.target.value)}
+											disabled={!!couponApplied}
 										/>
-										<Button
-											variant="outlined"
-											onClick={handleCouponApply}
-											disabled={
-												validateCouponMutation.isPending || !couponCode.trim()
-											}
-										>
-											{validateCouponMutation.isPending
-												? "Checking..."
-												: "Apply"}
-										</Button>
+										{couponApplied ? (
+											<Button
+												variant="outlined"
+												color="error"
+												onClick={() => {
+													setCouponApplied(null);
+													setCouponCode("");
+												}}
+											>
+												Remove
+											</Button>
+										) : (
+											<Button
+												variant="outlined"
+												onClick={handleCouponApply}
+												disabled={
+													validateCouponMutation.isPending || !couponCode.trim()
+												}
+											>
+												{validateCouponMutation.isPending
+													? "Checking..."
+													: "Apply"}
+											</Button>
+										)}
 									</Stack>
 									{couponApplied && (
 										<Typography

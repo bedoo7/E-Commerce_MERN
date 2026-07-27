@@ -1,6 +1,7 @@
 import { cartModel, ICartItem } from "../models/cartModel";
 import { IOrderItem, orderModel } from "../models/orderModel";
 import { productModel } from "../models/productModel";
+import { couponModel } from "../models/couponModel";
 
 interface CreateCartForUser {
 	userId: string;
@@ -218,8 +219,9 @@ export const deleteItemFromCart = async ({
 interface Checkout {
 	userId: string;
 	address: string;
+	couponCode?: string;
 }
-export const checkout = async ({ userId, address }: Checkout) => {
+export const checkout = async ({ userId, address, couponCode }: Checkout) => {
 	try {
 		if (!address) {
 			throw new Error("Shipping address is required for checkout");
@@ -255,12 +257,82 @@ export const checkout = async ({ userId, address }: Checkout) => {
 			});
 		}
 
+		const subtotal = cart.totalAmount;
+		let discount = 0;
+		let couponPercent: number | undefined = undefined;
+
+		// Validate and apply coupon server-side (per-user check only)
+		if (couponCode) {
+			const coupon = await couponModel.findOne({
+				code: couponCode.toUpperCase(),
+				isActive: true,
+				expiresAt: { $gt: new Date() },
+			});
+
+			if (coupon) {
+				// Check per-user usage (not global - each user can use independently)
+				const userEntry = (coupon.usedBy || []).find(
+					(u: any) => String(u.userId) === String(userId),
+				);
+				if (userEntry && userEntry.count >= 1) {
+					throw new Error("You have already used this coupon");
+				}
+
+				couponPercent = coupon.discountPercent;
+				discount = Math.round((subtotal * coupon.discountPercent) / 100);
+
+				// After successful order creation, update coupon usage
+				// (done after orderModel.create below)
+			}
+		}
+
+		const finalTotal = Math.max(subtotal - discount, 0);
+
+		// Generate unique order number (ORD-YYYYMMDD-XXXXXX)
+		const now = new Date();
+		const dateStr =
+			now.getFullYear().toString() +
+			String(now.getMonth() + 1).padStart(2, "0") +
+			String(now.getDate()).padStart(2, "0");
+		const randomSuffix = Math.floor(Math.random() * 900000) + 100000;
+		const orderNumber = `ORD-${dateStr}-${randomSuffix}`;
 		const order = await orderModel.create({
+			orderNumber,
 			userId,
 			orderItems,
-			totalAmount: cart.totalAmount,
+			totalAmount: finalTotal,
+			subtotal,
+			discount,
+			couponCode: couponCode ? couponCode.toUpperCase() : undefined,
+			couponPercent,
 			address,
 		});
+
+		// Update coupon usage only after successful order creation
+		// Per-user tracking: increment existing user's count or add new entry
+		if (couponCode && discount > 0) {
+			// Try to increment existing user's count first
+			const updateResult = await couponModel.updateOne(
+				{
+					code: couponCode.toUpperCase(),
+					"usedBy.userId": userId,
+				},
+				{
+					$inc: { usedCount: 1, "usedBy.$.count": 1 },
+				},
+			);
+
+			// If no existing entry was found, push a new one
+			if (updateResult.modifiedCount === 0) {
+				await couponModel.updateOne(
+					{ code: couponCode.toUpperCase() },
+					{
+						$inc: { usedCount: 1 },
+						$push: { usedBy: { userId, count: 1 } },
+					},
+				);
+			}
+		}
 
 		cart.status = "completed";
 		await cart.save();

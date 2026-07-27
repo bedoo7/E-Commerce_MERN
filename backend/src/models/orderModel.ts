@@ -22,9 +22,14 @@ export type OrderStatus =
 	| "cancelled";
 
 export interface IOrder extends Document {
+	orderNumber?: string;
 	userId: ObjectId | string;
 	orderItems: IOrderItem[];
 	totalAmount: number;
+	subtotal: number;
+	discount: number;
+	couponCode?: string;
+	couponPercent?: number;
 	address: string;
 	status: OrderStatus;
 	createdAt?: Date;
@@ -33,9 +38,14 @@ export interface IOrder extends Document {
 
 const orderSchema = new Schema<IOrder>(
 	{
+		orderNumber: { type: String, unique: true, sparse: true },
 		userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
 		orderItems: [orderItemSchema],
 		totalAmount: { type: Number, required: true, default: 0 },
+		subtotal: { type: Number, default: 0 },
+		discount: { type: Number, default: 0 },
+		couponCode: { type: String, default: undefined },
+		couponPercent: { type: Number, default: undefined },
 		address: { type: String, required: true },
 		status: {
 			type: String,
