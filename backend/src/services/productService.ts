@@ -16,6 +16,7 @@ export interface ProductQueryParams {
 	minPrice?: string | number;
 	maxPrice?: string | number;
 	inStock?: string | boolean;
+	stockStatus?: string;
 	sortBy?: string;
 	sortOrder?: string;
 }
@@ -61,6 +62,12 @@ export const getAllProducts = async (
 
 	if (queryParams.inStock === "true" || queryParams.inStock === true) {
 		filter.stock = { $gt: 0 };
+	}
+
+	if (queryParams.stockStatus === "lowstock") {
+		filter.stock = { $lte: 5, $gt: 0 };
+	} else if (queryParams.stockStatus === "outofstock") {
+		filter.stock = { $lte: 0 };
 	}
 
 	const allowedSortFields = ["price", "createdAt", "name", "stock", "brand"];

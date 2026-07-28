@@ -5,6 +5,7 @@ import {
 	validateCoupon,
 	createCoupon,
 	getAllCoupons,
+	updateCoupon,
 	deleteCoupon,
 } from "../services/couponService";
 
@@ -25,15 +26,20 @@ router.post("/validate", authenticate, async (req: any, res) => {
 	}
 });
 
-// Admin: Get all coupons
-router.get("/", authenticate, authorize("admin"), async (_req, res) => {
-	try {
-		const coupons = await getAllCoupons();
-		res.status(200).json(coupons);
-	} catch (error: any) {
-		res.status(400).json({ message: error.message });
-	}
-});
+// Admin: Get all coupons with pagination
+router.get(
+	"/",
+	authenticate,
+	authorize("admin"),
+	async (req, res) => {
+		try {
+			const coupons = await getAllCoupons(req.query);
+			res.status(200).json(coupons);
+		} catch (error: any) {
+			res.status(400).json({ message: error.message });
+		}
+	},
+);
 
 // Admin: Create a coupon
 router.post("/", authenticate, authorize("admin"), async (req, res) => {
@@ -44,6 +50,21 @@ router.post("/", authenticate, authorize("admin"), async (req, res) => {
 		res.status(400).json({ message: error.message });
 	}
 });
+
+// Admin: Update a coupon
+router.put(
+	"/:id",
+	authenticate,
+	authorize("admin"),
+	async (req: any, res) => {
+		try {
+			const coupon = await updateCoupon(String(req.params.id), req.body);
+			res.status(200).json(coupon);
+		} catch (error: any) {
+			res.status(400).json({ message: error.message });
+		}
+	},
+);
 
 // Admin: Delete a coupon
 router.delete(
@@ -61,3 +82,4 @@ router.delete(
 );
 
 export default router;
+

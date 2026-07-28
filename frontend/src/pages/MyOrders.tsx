@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -22,6 +22,8 @@ import { IOrder, IPaginatedResponse, OrderStatus } from "../types";
 import { PaginationComponent } from "../components/common/PaginationComponent";
 import { EmptyState } from "../components/common/EmptyState";
 import { luxeTableContainer } from "../theme/luxeStyles";
+import { usePaginationScroll } from "../hooks/usePaginationScroll";
+import { useState } from "react";
 
 const statusColors: Record<
 	OrderStatus,
@@ -36,8 +38,14 @@ const statusColors: Record<
 
 export const MyOrders: React.FC = () => {
 	const navigate = useNavigate();
-	const [page, setPage] = useState(1);
 	const limit = 10;
+	const { containerRef, scrollToTop } = usePaginationScroll();
+	const [page, setPage] = useState(1);
+
+	const handlePageChange = (p: number) => {
+		setPage(p);
+		scrollToTop();
+	};
 
 	const { data, isLoading, error } = useQuery<IPaginatedResponse<IOrder>>({
 		queryKey: ["my-orders", page],
@@ -117,13 +125,16 @@ export const MyOrders: React.FC = () => {
 			) : (
 				<>
 					<TableContainer
+						ref={containerRef}
 						component={Paper}
 						sx={{ ...luxeTableContainer, maxHeight: "none" }}
 					>
 						<Table>
-							<TableHead sx={{ bgcolor: "action.hover" }}>
+							<TableHead>
 								<TableRow>
-									<TableCell sx={{ fontWeight: 700 }}>Order ID</TableCell>
+									<TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+										Order ID
+									</TableCell>
 									<TableCell sx={{ fontWeight: 700 }}>Items</TableCell>
 									<TableCell sx={{ fontWeight: 700 }}>Total</TableCell>
 									<TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
@@ -134,11 +145,17 @@ export const MyOrders: React.FC = () => {
 							<TableBody>
 								{orders.map((order) => (
 									<TableRow key={order._id} hover>
-										<TableCell>
+										<TableCell sx={{ pl: 3 }}>
 											<Typography
 												variant="body2"
 												fontWeight={600}
-												sx={{ fontFamily: "monospace" }}
+												sx={{
+													fontFamily: "monospace",
+													maxWidth: 140,
+													overflow: "hidden",
+													textOverflow: "ellipsis",
+													whiteSpace: "nowrap",
+												}}
 											>
 												#{order.orderNumber}
 											</Typography>
@@ -161,7 +178,11 @@ export const MyOrders: React.FC = () => {
 											/>
 										</TableCell>
 										<TableCell>
-											<Typography variant="body2" color="text.secondary">
+											<Typography
+												variant="body2"
+												color="text.secondary"
+												sx={{ whiteSpace: "nowrap" }}
+											>
 												{order.createdAt
 													? new Date(order.createdAt).toLocaleDateString(
 															"en-US",
@@ -192,7 +213,7 @@ export const MyOrders: React.FC = () => {
 					{pagination && (
 						<PaginationComponent
 							pagination={pagination}
-							onPageChange={setPage}
+							onPageChange={handlePageChange}
 							onLimitChange={() => {}}
 						/>
 					)}

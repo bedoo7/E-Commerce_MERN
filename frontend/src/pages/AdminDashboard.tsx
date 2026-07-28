@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
 	Box,
@@ -48,6 +48,15 @@ import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import BarChartIcon from "@mui/icons-material/BarChart";
+import ShowChartIcon from "@mui/icons-material/ShowChart";
+import CategoryIcon from "@mui/icons-material/Category";
+import AssessmentIcon from "@mui/icons-material/Assessment";
+import PieChartIcon from "@mui/icons-material/PieChart";
+import PercentIcon from "@mui/icons-material/Percent";
+import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
+import SpeedIcon from "@mui/icons-material/Speed";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import { AnalyticsCharts } from "../components/analytics/AnalyticsCharts";
 import { api } from "../api/axios";
 import {
 	IProduct,
@@ -58,6 +67,10 @@ import {
 	OrderStatus,
 	IAnalytics,
 	ICoupon,
+	IProductQuery,
+	IUserQuery,
+	IOrderQuery,
+	ICouponQuery,
 } from "../types";
 import {
 	ProductSkeletonGrid,
@@ -71,6 +84,9 @@ import {
 	luxeSurface,
 	luxeStickySummary,
 } from "../theme/luxeStyles";
+import { usePaginationScroll } from "../hooks/usePaginationScroll";
+import { useDebounce } from "../hooks/useDebounce";
+import { AdminFilterToolbar } from "../components/admin/AdminFilterToolbar";
 import toast from "react-hot-toast";
 
 const statusColors: Record<
@@ -102,7 +118,54 @@ export const AdminDashboard: React.FC = () => {
 	const [productPage, setProductPage] = useState(1);
 	const [orderPage, setOrderPage] = useState(1);
 	const [userPage, setUserPage] = useState(1);
+	const [couponPage, setCouponPage] = useState(1);
 	const limit = 12;
+	const { containerRef: productRef, scrollToTop: scrollProducts } =
+		usePaginationScroll();
+	const { containerRef: orderRef, scrollToTop: scrollOrders } =
+		usePaginationScroll();
+	const { containerRef: userRef, scrollToTop: scrollUsers } =
+		usePaginationScroll();
+
+	const [productSearch, setProductSearch] = useState("");
+	const debouncedProductSearch = useDebounce(productSearch, 300);
+	const [productCategory, setProductCategory] = useState("All");
+	const [productBrand, setProductBrand] = useState("All");
+	const [productStockStatus, setProductStockStatus] = useState("all");
+	const [productMinPrice, setProductMinPrice] = useState("");
+	const [productMaxPrice, setProductMaxPrice] = useState("");
+	const [productSortBy, setProductSortBy] = useState("createdAt");
+	const [productSortOrder, setProductSortOrder] = useState<"asc" | "desc">("desc");
+
+	const [orderSearch, setOrderSearch] = useState("");
+	const debouncedOrderSearch = useDebounce(orderSearch, 300);
+	const [orderStatus, setOrderStatus] = useState("");
+	const [orderMinPrice, setOrderMinPrice] = useState("");
+	const [orderMaxPrice, setOrderMaxPrice] = useState("");
+	const [orderStartDate, setOrderStartDate] = useState("");
+	const [orderEndDate, setOrderEndDate] = useState("");
+	const [orderSortBy, setOrderSortBy] = useState("createdAt");
+	const [orderSortOrder, setOrderSortOrder] = useState<"asc" | "desc">("desc");
+
+	const [userSearch, setUserSearch] = useState("");
+	const debouncedUserSearch = useDebounce(userSearch, 300);
+	const [userRole, setUserRole] = useState("");
+	const [userIsActive, setUserIsActive] = useState("");
+	const [userStartDate, setUserStartDate] = useState("");
+	const [userEndDate, setUserEndDate] = useState("");
+	const [userSortBy, setUserSortBy] = useState("createdAt");
+	const [userSortOrder, setUserSortOrder] = useState<"asc" | "desc">("desc");
+
+	const [couponSearch, setCouponSearch] = useState("");
+	const debouncedCouponSearch = useDebounce(couponSearch, 300);
+	const [couponStatus, setCouponStatus] = useState("");
+	const [couponDiscountType, setCouponDiscountType] = useState("");
+	const [couponMinDiscount, setCouponMinDiscount] = useState("");
+	const [couponMaxDiscount, setCouponMaxDiscount] = useState("");
+	const [couponStartDate, setCouponStartDate] = useState("");
+	const [couponEndDate, setCouponEndDate] = useState("");
+	const [couponSortBy, setCouponSortBy] = useState("createdAt");
+	const [couponSortOrder, setCouponSortOrder] = useState<"asc" | "desc">("desc");
 
 	// Product management state
 	const [productDialogOpen, setProductDialogOpen] = useState(false);
@@ -156,6 +219,7 @@ export const AdminDashboard: React.FC = () => {
 		isActive: true,
 	});
 	const [deleteCouponId, setDeleteCouponId] = useState<string | null>(null);
+	const [editCouponId, setEditCouponId] = useState<string | null>(null);
 
 	// Fetch analytics data
 	const {
@@ -192,12 +256,28 @@ export const AdminDashboard: React.FC = () => {
 	});
 
 	// Fetch users with pagination
+	const buildUserQueryParams = useMemo(() => {
+		const params = new URLSearchParams();
+		params.set("page", String(userPage));
+		params.set("limit", String(limit));
+		if (debouncedUserSearch) params.set("search", debouncedUserSearch);
+		if (userRole) params.set("role", userRole);
+		if (userIsActive) params.set("isActive", userIsActive);
+		if (userStartDate) params.set("startDate", userStartDate);
+		if (userEndDate) params.set("endDate", userEndDate);
+		if (userSortBy) {
+			params.set("sortBy", userSortBy);
+			params.set("sortOrder", userSortOrder);
+		}
+		return params.toString();
+	}, [userPage, debouncedUserSearch, userRole, userIsActive, userStartDate, userEndDate, userSortBy, userSortOrder]);
+
 	const { data: usersData, isLoading: usersLoading } = useQuery<IUsersResponse>(
 		{
-			queryKey: ["admin-users", userPage],
+			queryKey: ["admin-users", userPage, debouncedUserSearch, userRole, userIsActive, userStartDate, userEndDate, userSortBy],
 			queryFn: async () => {
 				const res = await api.get<IUsersResponse>(
-					`/user/getAllUsers?page=${userPage}&limit=${limit}`,
+					`/user/getAllUsers?${buildUserQueryParams}`,
 				);
 				return res.data;
 			},
@@ -205,26 +285,62 @@ export const AdminDashboard: React.FC = () => {
 	);
 
 	// Fetch all orders
+	const buildOrderQueryParams = useMemo(() => {
+		const params = new URLSearchParams();
+		params.set("page", String(orderPage));
+		params.set("limit", String(limit));
+		if (debouncedOrderSearch) params.set("search", debouncedOrderSearch);
+		if (orderStatus) params.set("status", orderStatus);
+		if (orderMinPrice) params.set("minPrice", orderMinPrice);
+		if (orderMaxPrice) params.set("maxPrice", orderMaxPrice);
+		if (orderStartDate) params.set("startDate", orderStartDate);
+		if (orderEndDate) params.set("endDate", orderEndDate);
+		if (orderSortBy) {
+			params.set("sortBy", orderSortBy);
+			params.set("sortOrder", orderSortOrder);
+		}
+		return params.toString();
+	}, [orderPage, debouncedOrderSearch, orderStatus, orderMinPrice, orderMaxPrice, orderStartDate, orderEndDate, orderSortBy, orderSortOrder]);
+
 	const { data: ordersData, isLoading: ordersLoading } = useQuery<
 		IPaginatedResponse<IOrder>
 	>({
-		queryKey: ["admin-orders", orderPage],
+		queryKey: ["admin-orders", orderPage, debouncedOrderSearch, orderStatus, orderMinPrice, orderMaxPrice, orderStartDate, orderEndDate, orderSortBy],
 		queryFn: async () => {
 			const res = await api.get<IPaginatedResponse<IOrder>>(
-				`/order/admin/all?page=${orderPage}&limit=${limit}`,
+				`/order/admin/all?${buildOrderQueryParams}`,
 			);
 			return res.data;
 		},
 	});
 
 	// Fetch all products
+	const buildProductQueryParams = useMemo(() => {
+		const params = new URLSearchParams();
+		params.set("page", String(productPage));
+		params.set("limit", String(limit));
+		if (debouncedProductSearch) params.set("search", debouncedProductSearch);
+		if (productCategory && productCategory !== "All") params.set("category", productCategory);
+		if (productBrand && productBrand !== "All") params.set("brand", productBrand);
+		if (productStockStatus === "instock") params.set("inStock", "true");
+		if (productStockStatus === "lowstock") params.set("stockStatus", "lowstock");
+		if (productStockStatus === "outofstock") params.set("stockStatus", "outofstock");
+		if (productMinPrice) params.set("minPrice", productMinPrice);
+		if (productMaxPrice) params.set("maxPrice", productMaxPrice);
+		if (productSortBy) {
+			params.set("sortBy", productSortBy);
+			params.set("sortOrder", productSortOrder);
+		}
+		return params.toString();
+	}, [productPage, debouncedProductSearch, productCategory, productBrand, productStockStatus, productMinPrice, productMaxPrice, productSortBy, productSortOrder]);
+
 	const { data: productsData, isLoading: productsLoading } = useQuery<
 		IPaginatedResponse<IProduct>
 	>({
-		queryKey: ["admin-products", productPage],
+		queryKey: ["admin-products", productPage, debouncedProductSearch, productCategory, productBrand, productStockStatus, productMinPrice, productMaxPrice, productSortBy],
 		queryFn: async () => {
 			const res = await api.get<IPaginatedResponse<IProduct>>(
-				`/product?page=${productPage}&limit=${limit}`,
+				`/product?${buildProductQueryParams}`,
 			);
 			return res.data;
 		},
@@ -249,15 +365,39 @@ export const AdminDashboard: React.FC = () => {
 		staleTime: 1000 * 60 * 10,
 	});
 
-	const { data: coupons = [], isLoading: couponsLoading } = useQuery<ICoupon[]>(
-		{
-			queryKey: ["admin-coupons"],
-			queryFn: async () => {
-				const res = await api.get<ICoupon[]>("/coupon");
-				return res.data;
-			},
+	// Fetch coupons with pagination
+	const buildCouponQueryParams = useMemo(() => {
+		const params = new URLSearchParams();
+		params.set("page", String(couponPage));
+		params.set("limit", "10");
+		if (debouncedCouponSearch) params.set("search", debouncedCouponSearch);
+		if (couponStatus) params.set("status", couponStatus);
+		if (couponDiscountType) params.set("discountType", couponDiscountType);
+		if (couponMinDiscount) params.set("minDiscount", couponMinDiscount);
+		if (couponMaxDiscount) params.set("maxDiscount", couponMaxDiscount);
+		if (couponStartDate) params.set("startDate", couponStartDate);
+		if (couponEndDate) params.set("endDate", couponEndDate);
+		if (couponSortBy) {
+			params.set("sortBy", couponSortBy);
+			params.set("sortOrder", couponSortOrder);
+		}
+		return params.toString();
+	}, [couponPage, debouncedCouponSearch, couponStatus, couponDiscountType, couponMinDiscount, couponMaxDiscount, couponStartDate, couponEndDate, couponSortBy, couponSortOrder]);
+
+	const { data: couponsData, isLoading: couponsLoading } = useQuery<
+		IPaginatedResponse<ICoupon>
+	>({
+		queryKey: ["admin-coupons", couponPage, debouncedCouponSearch, couponStatus, couponDiscountType, couponMinDiscount, couponMaxDiscount, couponStartDate, couponEndDate, couponSortBy],
+		queryFn: async () => {
+			const res = await api.get<IPaginatedResponse<ICoupon>>(
+				`/coupon?${buildCouponQueryParams}`,
+			);
+			return res.data;
 		},
-	);
+	});
+
+	const coupons = couponsData?.data ?? [];
+	const couponsPagination = couponsData?.pagination;
 
 	// Create/Update product mutation
 	const saveProductMutation = useMutation({
@@ -438,6 +578,34 @@ export const AdminDashboard: React.FC = () => {
 		},
 	});
 
+	const updateCouponMutation = useMutation({
+		mutationFn: async (data: typeof couponForm & { id: string }) => {
+			const { id, ...updateData } = data;
+			const res = await api.put("/coupon/" + id, updateData);
+			return res.data;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin-coupons"] });
+			queryClient.invalidateQueries({ queryKey: ["admin-analytics"] });
+			toast.success("Coupon updated successfully!");
+			setCouponDialogOpen(false);
+			setEditCouponId(null);
+			setCouponForm({
+				code: "",
+				discountType: "percentage",
+				discountPercent: 10,
+				discountValue: 0,
+				minOrderAmount: 0,
+				expiresAt: "",
+				usageLimit: 0,
+				isActive: true,
+			});
+		},
+		onError: (err: any) => {
+			toast.error(err.message || "Failed to update coupon");
+		},
+	});
+
 	const resetProductForm = () => {
 		setProductForm({
 			name: "",
@@ -543,6 +711,82 @@ export const AdminDashboard: React.FC = () => {
 	const usersPagination = usersData?.pagination;
 	const totalItems = productsData?.pagination?.totalItems || 0;
 
+	const clearProductFilters = () => {
+		setProductSearch("");
+		setProductCategory("All");
+		setProductBrand("All");
+		setProductStockStatus("all");
+		setProductMinPrice("");
+		setProductMaxPrice("");
+		setProductSortBy("createdAt");
+		setProductPage(1);
+	};
+
+	const clearOrderFilters = () => {
+		setOrderSearch("");
+		setOrderStatus("");
+		setOrderMinPrice("");
+		setOrderMaxPrice("");
+		setOrderStartDate("");
+		setOrderEndDate("");
+		setOrderSortBy("createdAt");
+		setOrderPage(1);
+	};
+
+	const clearUserFilters = () => {
+		setUserSearch("");
+		setUserRole("");
+		setUserIsActive("");
+		setUserStartDate("");
+		setUserEndDate("");
+		setUserSortBy("createdAt");
+		setUserPage(1);
+	};
+
+	const clearCouponFilters = () => {
+		setCouponSearch("");
+		setCouponStatus("");
+		setCouponDiscountType("");
+		setCouponMinDiscount("");
+		setCouponMaxDiscount("");
+		setCouponStartDate("");
+		setCouponEndDate("");
+		setCouponSortBy("createdAt");
+		setCouponPage(1);
+	};
+
+	const productHasActiveFilters =
+		productSearch !== "" ||
+		productCategory !== "All" ||
+		productBrand !== "All" ||
+		productStockStatus !== "all" ||
+		productMinPrice !== "" ||
+		productMaxPrice !== "";
+
+	const orderHasActiveFilters =
+		orderSearch !== "" ||
+		orderStatus !== "" ||
+		orderMinPrice !== "" ||
+		orderMaxPrice !== "" ||
+		orderStartDate !== "" ||
+		orderEndDate !== "";
+
+	const userHasActiveFilters =
+		userSearch !== "" ||
+		userRole !== "" ||
+		userIsActive !== "" ||
+		userStartDate !== "" ||
+		userEndDate !== "";
+
+	const couponHasActiveFilters =
+		couponSearch !== "" ||
+		couponStatus !== "" ||
+		couponDiscountType !== "" ||
+		couponMinDiscount !== "" ||
+		couponMaxDiscount !== "" ||
+		couponStartDate !== "" ||
+		couponEndDate !== "";
+
 	return (
 		<Box>
 			<Typography variant="h4" fontWeight={800} gutterBottom>
@@ -570,64 +814,112 @@ export const AdminDashboard: React.FC = () => {
 				</Alert>
 			)}
 
-			{/* Analytics Section */}
+			{/* ====== ANALYTICS DASHBOARD ====== */}
 			{analytics && (
 				<Box mb={4}>
 					<Typography variant="h5" fontWeight={700} mb={3}>
-						Analytics Overview
+						Analytics Dashboard
 					</Typography>
-					<Grid container spacing={3} mb={4}>
+
+					{/* ── Revenue Section ── */}
+					<Typography variant="h6" fontWeight={700} mb={2}>
+						Revenue Overview
+					</Typography>
+					<Grid container spacing={3} mb={3}>
 						{[
 							{
-								icon: <AttachMoneyIcon sx={{ fontSize: 40 }} color="success" />,
 								label: "Total Revenue",
-								value: analytics.revenue?.totalRevenue ?? 0,
+								value:
+									"$" +
+									Number(analytics.revenue?.totalRevenue || 0).toLocaleString(),
 								color: "success.main",
 								isCurrency: true,
+								icon: <AttachMoneyIcon sx={{ fontSize: 40 }} color="success" />,
 							},
 							{
-								icon: <ShoppingBagIcon sx={{ fontSize: 40 }} color="primary" />,
-								label: "Total Orders",
-								value: analytics.revenue?.totalOrders ?? 0,
+								label: "Today",
+								value:
+									"$" +
+									Number(analytics.revenue?.revenueToday || 0).toLocaleString(),
+								color: "success.main",
+								isCurrency: true,
+								icon: <ShowChartIcon sx={{ fontSize: 40 }} color="success" />,
+							},
+							{
+								label: "This Week",
+								value:
+									"$" +
+									Number(
+										analytics.revenue?.revenueThisWeek || 0,
+									).toLocaleString(),
 								color: "primary.main",
+								isCurrency: true,
+								icon: <TrendingUpIcon sx={{ fontSize: 40 }} color="primary" />,
 							},
 							{
-								icon: <PeopleIcon sx={{ fontSize: 40 }} color="info" />,
-								label: "Total Users",
-								value: analytics.totals?.users ?? 0,
+								label: "This Month",
+								value:
+									"$" +
+									Number(
+										analytics.revenue?.revenueThisMonth || 0,
+									).toLocaleString(),
 								color: "info.main",
+								isCurrency: true,
+								icon: <AssessmentIcon sx={{ fontSize: 40 }} color="info" />,
 							},
 							{
-								icon: <InventoryIcon sx={{ fontSize: 40 }} color="secondary" />,
-								label: "Total Products",
-								value: analytics.totals?.products ?? 0,
+								label: "This Year",
+								value:
+									"$" +
+									Number(
+										analytics.revenue?.revenueThisYear || 0,
+									).toLocaleString(),
 								color: "secondary.main",
+								isCurrency: true,
+								icon: <BarChartIcon sx={{ fontSize: 40 }} color="secondary" />,
 							},
 							{
-								icon: <TrendingUpIcon sx={{ fontSize: 40 }} color="warning" />,
 								label: "Avg Order Value",
-								value: analytics.revenue?.avgOrderValue ?? 0,
+								value:
+									"$" +
+									Number(
+										analytics.revenue?.avgOrderValue || 0,
+									).toLocaleString(),
 								color: "warning.main",
 								isCurrency: true,
+								icon: (
+									<AccountBalanceWalletIcon
+										sx={{ fontSize: 40 }}
+										color="warning"
+									/>
+								),
 							},
 							{
-								icon: <WarningAmberIcon sx={{ fontSize: 40 }} color="error" />,
-								label: "Low Stock Items",
-								value:
-									(analytics.stock?.lowStock ?? 0) +
-									(analytics.stock?.outOfStock ?? 0),
-								color: "error.main",
+								label: "Revenue Growth",
+								value: (analytics.revenue?.revenueGrowth || 0) + "%",
+								color:
+									(analytics.revenue?.revenueGrowth || 0) >= 0
+										? "success.main"
+										: "error.main",
+								isCurrency: false,
+								icon: (
+									<PercentIcon
+										sx={{ fontSize: 40 }}
+										color={
+											(analytics.revenue?.revenueGrowth || 0) >= 0
+												? "success"
+												: "error"
+										}
+									/>
+								),
 							},
 						].map((stat) => (
-							<Grid item xs={12} sm={6} md={4} lg={2} key={stat.label}>
+							<Grid item xs={12} sm={6} md={4} lg key={stat.label}>
 								<Card
 									sx={{
 										...luxeSurface,
-										height: "100%",
 										transition: "transform 0.25s ease, box-shadow 0.3s ease",
-										"&:hover": {
-											transform: "translateY(-3px)",
-										},
+										"&:hover": { transform: "translateY(-3px)" },
 									}}
 								>
 									<CardContent>
@@ -658,9 +950,900 @@ export const AdminDashboard: React.FC = () => {
 													{stat.label}
 												</Typography>
 												<Typography variant="h6" fontWeight={800}>
-													{stat.isCurrency
-														? "$" + Number(stat.value).toLocaleString()
-														: Number(stat.value).toLocaleString()}
+													{stat.value}
+												</Typography>
+											</Box>
+										</Stack>
+									</CardContent>
+								</Card>
+							</Grid>
+						))}
+					</Grid>
+					<Grid container spacing={3} mb={4}>
+						<Grid item xs={12} md={6}>
+							<AnalyticsCharts
+								data={(analytics.charts?.dailyRevenue || []).slice(-14)}
+								title="Daily Revenue"
+								type="line"
+								color="#4f46e5"
+							/>
+						</Grid>
+						<Grid item xs={12} md={6}>
+							<AnalyticsCharts
+								data={(analytics.charts?.monthlyRevenue || []).slice(-6)}
+								title="Monthly Revenue"
+								type="bar"
+								color="#6366f1"
+							/>
+						</Grid>
+					</Grid>
+
+					{/* ── Orders Section ── */}
+					<Typography variant="h6" fontWeight={700} mb={2}>
+						Orders Analytics
+					</Typography>
+					<Grid container spacing={3} mb={3}>
+						{[
+							{
+								label: "Total Orders",
+								value: Number(
+									analytics.orders?.totalOrders || 0,
+								).toLocaleString(),
+								color: "primary.main",
+								icon: <ShoppingBagIcon sx={{ fontSize: 40 }} color="primary" />,
+							},
+							{
+								label: "Today",
+								value: Number(
+									analytics.orders?.ordersToday || 0,
+								).toLocaleString(),
+								color: "info.main",
+								icon: <SpeedIcon sx={{ fontSize: 40 }} color="info" />,
+							},
+							{
+								label: "This Week",
+								value: Number(
+									analytics.orders?.ordersThisWeek || 0,
+								).toLocaleString(),
+								color: "primary.main",
+								icon: <TrendingUpIcon sx={{ fontSize: 40 }} color="primary" />,
+							},
+							{
+								label: "This Month",
+								value: Number(
+									analytics.orders?.ordersThisMonth || 0,
+								).toLocaleString(),
+								color: "info.main",
+								icon: <AssessmentIcon sx={{ fontSize: 40 }} color="info" />,
+							},
+							{
+								label: "Pending",
+								value: Number(analytics.orders?.pending || 0).toLocaleString(),
+								color: "warning.main",
+								icon: (
+									<WarningAmberIcon sx={{ fontSize: 40 }} color="warning" />
+								),
+							},
+							{
+								label: "Completion Rate",
+								value: (analytics.orders?.completionRate || 0) + "%",
+								color: "success.main",
+								icon: <AutoFixHighIcon sx={{ fontSize: 40 }} color="success" />,
+							},
+							{
+								label: "Cancellation Rate",
+								value: (analytics.orders?.cancellationRate || 0) + "%",
+								color: "error.main",
+								icon: <PercentIcon sx={{ fontSize: 40 }} color="error" />,
+							},
+						].map((stat) => (
+							<Grid item xs={12} sm={6} md={4} lg key={stat.label}>
+								<Card
+									sx={{
+										...luxeSurface,
+										transition: "transform 0.25s ease",
+										"&:hover": { transform: "translateY(-3px)" },
+									}}
+								>
+									<CardContent>
+										<Stack direction="row" alignItems="center" spacing={2}>
+											<Box
+												sx={{
+													width: 48,
+													height: 48,
+													borderRadius: 2.5,
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+													bgcolor: (theme) =>
+														theme.palette.mode === "light"
+															? stat.color.replace(".main", "") + "15"
+															: stat.color.replace(".main", "") + "20",
+												}}
+											>
+												{stat.icon}
+											</Box>
+											<Box>
+												<Typography
+													variant="overline"
+													color="text.secondary"
+													fontWeight={700}
+													sx={{ lineHeight: 1.2 }}
+												>
+													{stat.label}
+												</Typography>
+												<Typography variant="h6" fontWeight={800}>
+													{stat.value}
+												</Typography>
+											</Box>
+										</Stack>
+									</CardContent>
+								</Card>
+							</Grid>
+						))}
+					</Grid>
+					<Grid container spacing={3} mb={4}>
+						<Grid item xs={12} md={6}>
+							<AnalyticsCharts
+								data={(analytics.charts?.ordersOverTime || []).slice(-14)}
+								title="Orders Over Time"
+								type="bar"
+								color="#10b981"
+							/>
+						</Grid>
+						<Grid item xs={12} md={6}>
+							<AnalyticsCharts
+								data={[
+									{
+										label: "Pending",
+										value: analytics.orders?.pending || 0,
+										color: "#f59e0b",
+									},
+									{
+										label: "Processing",
+										value: analytics.orders?.processing || 0,
+										color: "#3b82f6",
+									},
+									{
+										label: "Shipped",
+										value: analytics.orders?.shipped || 0,
+										color: "#8b5cf6",
+									},
+									{
+										label: "Delivered",
+										value: analytics.orders?.delivered || 0,
+										color: "#10b981",
+									},
+									{
+										label: "Cancelled",
+										value: analytics.orders?.cancelled || 0,
+										color: "#ef4444",
+									},
+								]}
+								title="Orders by Status"
+								type="donut"
+							/>
+						</Grid>
+					</Grid>
+
+					{/* ── Products Section ── */}
+					<Typography variant="h6" fontWeight={700} mb={2}>
+						Products Analytics
+					</Typography>
+					<Grid container spacing={3} mb={3}>
+						{[
+							{
+								label: "Total Products",
+								value: Number(
+									analytics.products?.totalProducts || 0,
+								).toLocaleString(),
+								color: "primary.main",
+							},
+							{
+								label: "Active",
+								value: Number(
+									analytics.products?.activeProducts || 0,
+								).toLocaleString(),
+								color: "success.main",
+							},
+							{
+								label: "Low Stock",
+								value: Number(
+									analytics.products?.lowStock || 0,
+								).toLocaleString(),
+								color: "warning.main",
+							},
+							{
+								label: "Out of Stock",
+								value: Number(
+									analytics.products?.outOfStock || 0,
+								).toLocaleString(),
+								color: "error.main",
+							},
+						].map((stat) => (
+							<Grid item xs={6} md={3} key={stat.label}>
+								<Card sx={{ ...luxeSurface }}>
+									<CardContent>
+										<Typography
+											variant="overline"
+											color="text.secondary"
+											fontWeight={700}
+										>
+											{stat.label}
+										</Typography>
+										<Typography
+											variant="h5"
+											fontWeight={800}
+											color={stat.color}
+										>
+											{stat.value}
+										</Typography>
+									</CardContent>
+								</Card>
+							</Grid>
+						))}
+					</Grid>
+
+					{/* Best & Worst Selling */}
+					<Grid container spacing={3} mb={3}>
+						<Grid item xs={12} md={6}>
+							<Card sx={{ ...luxeSurface, borderRadius: 3 }}>
+								<CardContent>
+									<Typography variant="subtitle1" fontWeight={700} mb={2}>
+										Best Selling Products
+									</Typography>
+									{(analytics.products?.topSelling || []).length === 0 ? (
+										<Typography color="text.secondary" variant="body2">
+											No sales data yet.
+										</Typography>
+									) : (
+										<Box sx={{ maxHeight: 300, overflow: "auto" }}>
+											{(analytics.products?.topSelling || []).map(
+												(p: any, i: number) => (
+													<Box
+														key={i}
+														sx={{
+															display: "flex",
+															alignItems: "center",
+															gap: 2,
+															py: 1,
+															borderBottom: "1px solid",
+															borderColor: "divider",
+														}}
+													>
+														<Typography
+															variant="body2"
+															fontWeight={700}
+															sx={{ minWidth: 24 }}
+														>
+															#{i + 1}
+														</Typography>
+														<Box sx={{ flexGrow: 1 }}>
+															<Typography variant="body2" fontWeight={600}>
+																{p.name}
+															</Typography>
+															<Typography
+																variant="caption"
+																color="text.secondary"
+															>
+																{Number(p.totalQuantity || 0).toLocaleString()}{" "}
+																sold
+															</Typography>
+														</Box>
+														<Typography
+															variant="body2"
+															fontWeight={700}
+															color="primary"
+														>
+															${Number(p.totalRevenue || 0).toLocaleString()}
+														</Typography>
+													</Box>
+												),
+											)}
+										</Box>
+									)}
+								</CardContent>
+							</Card>
+						</Grid>
+						<Grid item xs={12} md={6}>
+							<Card sx={{ ...luxeSurface, borderRadius: 3 }}>
+								<CardContent>
+									<Typography variant="subtitle1" fontWeight={700} mb={2}>
+										Low Stock Products
+									</Typography>
+									{(analytics.products?.lowStockProducts || []).length === 0 ? (
+										<Typography color="text.secondary" variant="body2">
+											All products well stocked.
+										</Typography>
+									) : (
+										<Box sx={{ maxHeight: 300, overflow: "auto" }}>
+											{(analytics.products?.lowStockProducts || []).map(
+												(p: any) => (
+													<Box
+														key={p._id}
+														sx={{
+															display: "flex",
+															alignItems: "center",
+															gap: 2,
+															py: 1,
+															borderBottom: "1px solid",
+															borderColor: "divider",
+														}}
+													>
+														<Chip
+															label={p.stock + " left"}
+															size="small"
+															color={p.stock <= 2 ? "error" : "warning"}
+															sx={{
+																whiteSpace: "nowrap",
+																overflow: "hidden",
+																textOverflow: "ellipsis",
+																minHeight: 28,
+																height: 28,
+																fontWeight: 700,
+																minWidth: 70,
+															}}
+														/>
+														<Box sx={{ flexGrow: 1 }}>
+															<Typography variant="body2" fontWeight={600}>
+																{p.name}
+															</Typography>
+															<Typography
+																variant="caption"
+																color="text.secondary"
+															>
+																{p.category}
+															</Typography>
+														</Box>
+													</Box>
+												),
+											)}
+										</Box>
+									)}
+								</CardContent>
+							</Card>
+						</Grid>
+					</Grid>
+
+					{/* Never Ordered */}
+					<Card sx={{ ...luxeSurface, borderRadius: 3, mb: 3 }}>
+						<CardContent>
+							<Typography variant="subtitle1" fontWeight={700} mb={2}>
+								Never Ordered Products
+							</Typography>
+							{(analytics.products?.neverOrdered || []).length === 0 ? (
+								<Typography color="text.secondary" variant="body2">
+									All products have been ordered.
+								</Typography>
+							) : (
+								<Box sx={{ maxHeight: 250, overflow: "auto" }}>
+									{(analytics.products?.neverOrdered || []).map((p: any) => (
+										<Box
+											key={p._id}
+											sx={{
+												display: "flex",
+												alignItems: "center",
+												gap: 2,
+												py: 1,
+												borderBottom: "1px solid",
+												borderColor: "divider",
+											}}
+										>
+											<Chip
+												label="Never sold"
+												size="small"
+												color="default"
+												sx={{
+													whiteSpace: "nowrap",
+													overflow: "hidden",
+													textOverflow: "ellipsis",
+													minHeight: 28,
+													height: 28,
+													fontWeight: 700,
+													minWidth: 80,
+												}}
+											/>
+											<Box sx={{ flexGrow: 1 }}>
+												<Typography variant="body2" fontWeight={600}>
+													{p.name}
+												</Typography>
+												<Typography variant="caption" color="text.secondary">
+													{p.category} | Stock: {p.stock}
+												</Typography>
+											</Box>
+										</Box>
+									))}
+								</Box>
+							)}
+						</CardContent>
+					</Card>
+
+					{/* ── Inventory Section ── */}
+					<Grid container spacing={3} mb={3}>
+						<Grid item xs={12} md={6}>
+							<Card sx={{ ...luxeSurface, borderRadius: 3 }}>
+								<CardContent>
+									<Typography
+										variant="subtitle1"
+										fontWeight={700}
+										mb={2}
+										color="warning.main"
+									>
+										Low Stock Inventory
+									</Typography>
+									{(analytics.inventory?.lowStock || []).length === 0 ? (
+										<Typography color="text.secondary" variant="body2">
+											No low stock items.
+										</Typography>
+									) : (
+										<Box sx={{ maxHeight: 250, overflow: "auto" }}>
+											{(analytics.inventory?.lowStock || []).map(
+												(item: any) => (
+													<Box
+														key={item._id}
+														sx={{
+															display: "flex",
+															alignItems: "center",
+															gap: 2,
+															py: 1,
+															borderBottom: "1px solid",
+															borderColor: "divider",
+														}}
+													>
+														<Chip
+															label={item.stock + " left"}
+															size="small"
+															color="warning"
+															sx={{
+																whiteSpace: "nowrap",
+																overflow: "hidden",
+																textOverflow: "ellipsis",
+																minHeight: 28,
+																height: 28,
+																fontWeight: 700,
+																minWidth: 70,
+															}}
+														/>
+														<Box sx={{ flexGrow: 1 }}>
+															<Typography variant="body2" fontWeight={600}>
+																{item.name}
+															</Typography>
+															<Typography
+																variant="caption"
+																color="text.secondary"
+															>
+																{item.category}
+															</Typography>
+														</Box>
+													</Box>
+												),
+											)}
+										</Box>
+									)}
+								</CardContent>
+							</Card>
+						</Grid>
+						<Grid item xs={12} md={6}>
+							<Card sx={{ ...luxeSurface, borderRadius: 3 }}>
+								<CardContent>
+									<Typography
+										variant="subtitle1"
+										fontWeight={700}
+										mb={2}
+										color="error"
+									>
+										Out of Stock Inventory
+									</Typography>
+									{(analytics.inventory?.outOfStock || []).length === 0 ? (
+										<Typography color="text.secondary" variant="body2">
+											All products in stock.
+										</Typography>
+									) : (
+										<Box sx={{ maxHeight: 250, overflow: "auto" }}>
+											{(analytics.inventory?.outOfStock || []).map(
+												(item: any) => (
+													<Box
+														key={item._id}
+														sx={{
+															display: "flex",
+															alignItems: "center",
+															gap: 2,
+															py: 1,
+															borderBottom: "1px solid",
+															borderColor: "divider",
+														}}
+													>
+														<Chip
+															label="Out of stock"
+															size="small"
+															color="error"
+															sx={{
+																whiteSpace: "nowrap",
+																overflow: "hidden",
+																textOverflow: "ellipsis",
+																minHeight: 28,
+																height: 28,
+																fontWeight: 700,
+																minWidth: 80,
+															}}
+														/>
+														<Box sx={{ flexGrow: 1 }}>
+															<Typography variant="body2" fontWeight={600}>
+																{item.name}
+															</Typography>
+															<Typography
+																variant="caption"
+																color="text.secondary"
+															>
+																{item.category}
+															</Typography>
+														</Box>
+													</Box>
+												),
+											)}
+										</Box>
+									)}
+								</CardContent>
+							</Card>
+						</Grid>
+					</Grid>
+
+					{/* ── Customer Analytics ── */}
+					<Typography variant="h6" fontWeight={700} mb={2}>
+						Customer Analytics
+					</Typography>
+					<Grid container spacing={3} mb={3}>
+						{[
+							{
+								label: "Total Users",
+								value: Number(
+									analytics.customers?.totalUsers || 0,
+								).toLocaleString(),
+								color: "info.main",
+							},
+							{
+								label: "New Today",
+								value: Number(
+									analytics.customers?.newUsersToday || 0,
+								).toLocaleString(),
+								color: "primary.main",
+							},
+							{
+								label: "New This Month",
+								value: Number(
+									analytics.customers?.newUsersThisMonth || 0,
+								).toLocaleString(),
+								color: "primary.main",
+							},
+							{
+								label: "Returning",
+								value: Number(
+									analytics.customers?.returningCustomers || 0,
+								).toLocaleString(),
+								color: "success.main",
+							},
+						].map((stat) => (
+							<Grid item xs={6} md={3} key={stat.label}>
+								<Card sx={{ ...luxeSurface }}>
+									<CardContent>
+										<Typography
+											variant="overline"
+											color="text.secondary"
+											fontWeight={700}
+										>
+											{stat.label}
+										</Typography>
+										<Typography
+											variant="h5"
+											fontWeight={800}
+											color={stat.color}
+										>
+											{stat.value}
+										</Typography>
+									</CardContent>
+								</Card>
+							</Grid>
+						))}
+					</Grid>
+					<Grid container spacing={3} mb={3}>
+						<Grid item xs={12} md={6}>
+							<Card sx={{ ...luxeSurface, borderRadius: 3 }}>
+								<CardContent>
+									<Typography variant="subtitle1" fontWeight={700} mb={2}>
+										Highest Spending Customers
+									</Typography>
+									{(analytics.customers?.highestSpending || []).length === 0 ? (
+										<Typography color="text.secondary" variant="body2">
+											No customer data yet.
+										</Typography>
+									) : (
+										<Box sx={{ maxHeight: 250, overflow: "auto" }}>
+											{(analytics.customers?.highestSpending || []).map(
+												(c: any, i: number) => (
+													<Box
+														key={c.userId || i}
+														sx={{
+															py: 1,
+															borderBottom: "1px solid",
+															borderColor: "divider",
+														}}
+													>
+														<Box
+															sx={{
+																display: "flex",
+																justifyContent: "space-between",
+																alignItems: "center",
+															}}
+														>
+															<Typography variant="body2" fontWeight={600}>
+																{c.firstName} {c.lastName}
+															</Typography>
+															<Typography
+																variant="body2"
+																fontWeight={700}
+																color="primary"
+															>
+																${Number(c.totalSpent || 0).toLocaleString()}
+															</Typography>
+														</Box>
+														<Typography
+															variant="caption"
+															color="text.secondary"
+														>
+															{c.email} | {c.orderCount} orders
+														</Typography>
+													</Box>
+												),
+											)}
+										</Box>
+									)}
+								</CardContent>
+							</Card>
+						</Grid>
+						<Grid item xs={12} md={6}>
+							<Card sx={{ ...luxeSurface, borderRadius: 3 }}>
+								<CardContent>
+									<Typography variant="subtitle1" fontWeight={700} mb={2}>
+										Most Active Customers
+									</Typography>
+									{(analytics.customers?.mostOrders || []).length === 0 ? (
+										<Typography color="text.secondary" variant="body2">
+											No customer data yet.
+										</Typography>
+									) : (
+										<Box sx={{ maxHeight: 250, overflow: "auto" }}>
+											{(analytics.customers?.mostOrders || []).map(
+												(c: any, i: number) => (
+													<Box
+														key={c.userId || i}
+														sx={{
+															py: 1,
+															borderBottom: "1px solid",
+															borderColor: "divider",
+														}}
+													>
+														<Box
+															sx={{
+																display: "flex",
+																justifyContent: "space-between",
+																alignItems: "center",
+															}}
+														>
+															<Typography variant="body2" fontWeight={600}>
+																{c.firstName} {c.lastName}
+															</Typography>
+															<Typography
+																variant="body2"
+																fontWeight={700}
+																color="primary"
+															>
+																{c.orderCount} orders
+															</Typography>
+														</Box>
+														<Typography
+															variant="caption"
+															color="text.secondary"
+														>
+															{c.email} | $
+															{Number(c.totalSpent || 0).toLocaleString()} spent
+														</Typography>
+													</Box>
+												),
+											)}
+										</Box>
+									)}
+								</CardContent>
+							</Card>
+						</Grid>
+					</Grid>
+
+					{/* ── Coupon Analytics ── */}
+					<Typography variant="h6" fontWeight={700} mb={2}>
+						Coupon Analytics
+					</Typography>
+					<Grid container spacing={3} mb={3}>
+						{[
+							{
+								label: "Total Coupons",
+								value: Number(
+									analytics.coupons?.totalCoupons || 0,
+								).toLocaleString(),
+								color: "primary.main",
+							},
+							{
+								label: "Active",
+								value: Number(
+									analytics.coupons?.activeCoupons || 0,
+								).toLocaleString(),
+								color: "success.main",
+							},
+							{
+								label: "Expired",
+								value: Number(
+									analytics.coupons?.expiredCoupons || 0,
+								).toLocaleString(),
+								color: "error.main",
+							},
+							{
+								label: "Total Discounts",
+								value:
+									"$" +
+									Number(
+										analytics.coupons?.totalDiscountsGiven || 0,
+									).toLocaleString(),
+								color: "warning.main",
+							},
+							{
+								label: "Inactive",
+								value: Number(
+									analytics.coupons?.inactiveCoupons || 0,
+								).toLocaleString(),
+								color: "secondary.main",
+							},
+						].map((stat) => (
+							<Grid item xs={6} md={3} key={stat.label}>
+								<Card sx={{ ...luxeSurface }}>
+									<CardContent>
+										<Typography
+											variant="overline"
+											color="text.secondary"
+											fontWeight={700}
+										>
+											{stat.label}
+										</Typography>
+										<Typography
+											variant="h5"
+											fontWeight={800}
+											color={stat.color}
+										>
+											{stat.value}
+										</Typography>
+									</CardContent>
+								</Card>
+							</Grid>
+						))}
+					</Grid>
+
+					{/* ── Category Analytics ── */}
+					<Typography variant="h6" fontWeight={700} mb={2}>
+						Category Analytics
+					</Typography>
+					<Grid container spacing={3} mb={3}>
+						<Grid item xs={12} md={6}>
+							<AnalyticsCharts
+								data={(analytics.categories?.revenueByCategory || [])
+									.slice(0, 8)
+									.map((c) => ({
+										label: c.category || "Unknown",
+										value: c.revenue || 0,
+									}))}
+								title="Revenue by Category"
+								type="bar"
+								color="#8b5cf6"
+							/>
+						</Grid>
+						<Grid item xs={12} md={6}>
+							<AnalyticsCharts
+								data={(analytics.categories?.revenueByCategory || [])
+									.slice(0, 8)
+									.map((c) => ({
+										label: c.category || "Unknown",
+										value: c.revenue || 0,
+									}))}
+								title="Revenue by Category"
+								type="pie"
+							/>
+						</Grid>
+					</Grid>
+
+					{/* ── Business Insights ── */}
+					<Typography variant="h6" fontWeight={700} mb={2}>
+						Business Insights
+					</Typography>
+					<Grid container spacing={3} mb={3}>
+						{[
+							{
+								label: "Best Selling Product",
+								value: analytics.insights?.bestSellingProduct?.name || "N/A",
+								color: "success.main",
+								icon: <TrendingUpIcon sx={{ fontSize: 40 }} color="success" />,
+							},
+							{
+								label: "Worst Selling Product",
+								value: analytics.insights?.worstSellingProduct?.name || "N/A",
+								color: "error.main",
+								icon: <TrendingUpIcon sx={{ fontSize: 40 }} color="error" />,
+							},
+							{
+								label: "Fastest Growing Category",
+								value:
+									analytics.insights?.fastestGrowingCategory?.category || "N/A",
+								color: "primary.main",
+								icon: <CategoryIcon sx={{ fontSize: 40 }} color="primary" />,
+							},
+							{
+								label: "Avg Products/Order",
+								value: String(analytics.insights?.avgProductsPerOrder || 0),
+								color: "info.main",
+								icon: <SpeedIcon sx={{ fontSize: 40 }} color="info" />,
+							},
+							{
+								label: "Avg Revenue/Customer",
+								value:
+									"$" +
+									Number(
+										analytics.insights?.avgRevenuePerCustomer || 0,
+									).toLocaleString(),
+								color: "warning.main",
+								icon: (
+									<AccountBalanceWalletIcon
+										sx={{ fontSize: 40 }}
+										color="warning"
+									/>
+								),
+							},
+						].map((stat) => (
+							<Grid item xs={12} sm={6} md={4} lg={2} key={stat.label}>
+								<Card
+									sx={{
+										...luxeSurface,
+										transition: "transform 0.25s ease",
+										"&:hover": { transform: "translateY(-3px)" },
+									}}
+								>
+									<CardContent>
+										<Stack direction="row" alignItems="center" spacing={2}>
+											<Box
+												sx={{
+													width: 40,
+													height: 40,
+													borderRadius: 2.5,
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+													bgcolor: (theme) =>
+														theme.palette.mode === "light"
+															? stat.color.replace(".main", "") + "15"
+															: stat.color.replace(".main", "") + "20",
+												}}
+											>
+												{stat.icon}
+											</Box>
+											<Box>
+												<Typography
+													variant="overline"
+													color="text.secondary"
+													fontWeight={700}
+													sx={{ lineHeight: 1.2, fontSize: "0.65rem" }}
+												>
+													{stat.label}
+												</Typography>
+												<Typography
+													variant="subtitle2"
+													fontWeight={700}
+													sx={{ wordBreak: "break-word" }}
+												>
+													{stat.value}
 												</Typography>
 											</Box>
 										</Stack>
@@ -670,97 +1853,48 @@ export const AdminDashboard: React.FC = () => {
 						))}
 					</Grid>
 
-					{/* Orders by Status & Top Selling Products */}
-					<Grid container spacing={3}>
-						{/* Orders by Status */}
-						<Grid item xs={12} md={6}>
-							<Card
-								sx={{
-									borderRadius: 3,
-									border: "1px solid",
-									borderColor: "divider",
-									height: "100%",
-								}}
-							>
-								<CardContent>
-									<Stack direction="row" alignItems="center" spacing={1} mb={2}>
-										<BarChartIcon color="primary" />
-										<Typography variant="h6" fontWeight={700}>
-											Orders by Status
-										</Typography>
-									</Stack>
-									<List dense>
-										{Object.entries(analytics.ordersByStatus || {}).map(
-											([status, count]) => (
-												<ListItem key={status} sx={{ px: 0 }}>
-													<ListItemText
-														primary={
-															status.charAt(0).toUpperCase() + status.slice(1)
-														}
-														primaryTypographyProps={{ fontWeight: 600 }}
-													/>
-													<Chip
-														label={count as number}
-														color={(statusColors as any)[status] || "default"}
-														size="small"
-														sx={{ fontWeight: 700, minWidth: 40 }}
-													/>
-												</ListItem>
-											),
-										)}
-									</List>
-								</CardContent>
-							</Card>
+					{/* Revenue Line Chart */}
+					<Grid container spacing={3} mb={4}>
+						<Grid item xs={12} md={8}>
+							<AnalyticsCharts
+								data={(analytics.charts?.dailyRevenue || []).slice(-14)}
+								title="Daily Revenue Trend"
+								type="line"
+								color="#4f46e5"
+							/>
 						</Grid>
-
-						{/* Top Selling Products */}
-						<Grid item xs={12} md={6}>
-							<Card
-								sx={{
-									borderRadius: 3,
-									border: "1px solid",
-									borderColor: "divider",
-									height: "100%",
-								}}
-							>
-								<CardContent>
-									<Stack direction="row" alignItems="center" spacing={1} mb={2}>
-										<TrendingUpIcon color="primary" />
-										<Typography variant="h6" fontWeight={700}>
-											Top Selling Products
-										</Typography>
-									</Stack>
-									{(analytics.topSelling || []).length === 0 ? (
-										<Typography color="text.secondary" variant="body2">
-											No sales data available yet.
-										</Typography>
-									) : (
-										<List dense>
-											{(analytics.topSelling || []).map(
-												(item: any, idx: number) => (
-													<ListItem key={idx} sx={{ px: 0 }}>
-														<ListItemText
-															primary={item._id}
-															primaryTypographyProps={{ fontWeight: 600 }}
-														/>
-														<Chip
-															label={"#" + String(idx + 1)}
-															color={
-																idx === 0
-																	? "primary"
-																	: idx === 1
-																		? "secondary"
-																		: "default"
-															}
-															size="small"
-														/>
-													</ListItem>
-												),
-											)}
-										</List>
-									)}
-								</CardContent>
-							</Card>
+						<Grid item xs={12} md={4}>
+							<AnalyticsCharts
+								data={[
+									{
+										label: "Completed",
+										value: analytics.orders?.delivered || 0,
+										color: "#10b981",
+									},
+									{
+										label: "Shipped",
+										value: analytics.orders?.shipped || 0,
+										color: "#8b5cf6",
+									},
+									{
+										label: "Processing",
+										value: analytics.orders?.processing || 0,
+										color: "#3b82f6",
+									},
+									{
+										label: "Pending",
+										value: analytics.orders?.pending || 0,
+										color: "#f59e0b",
+									},
+									{
+										label: "Cancelled",
+										value: analytics.orders?.cancelled || 0,
+										color: "#ef4444",
+									},
+								]}
+								title="Order Status Distribution"
+								type="donut"
+							/>
 						</Grid>
 					</Grid>
 				</Box>
@@ -857,113 +1991,215 @@ export const AdminDashboard: React.FC = () => {
 				</Tabs>
 
 				<TabPanel value={tabIndex} index={0}>
-					<Box
-						display="flex"
-						justifyContent="space-between"
-						alignItems="center"
-						mb={3}
-						px={3}
-					>
-						<Typography variant="h6" fontWeight={700}>
-							All Products
-						</Typography>
-						<Button
-							variant="contained"
-							startIcon={<AddIcon />}
-							onClick={openCreateProduct}
+					<Box px={3}>
+						<Box
+							display="flex"
+							justifyContent="space-between"
+							alignItems="center"
+							mb={3}
 						>
-							Add Product
-						</Button>
-					</Box>
+							<Typography variant="h6" fontWeight={700}>
+								All Products
+							</Typography>
+							<Button
+								variant="contained"
+								startIcon={<AddIcon />}
+								onClick={openCreateProduct}
+							>
+								Add Product
+							</Button>
+						</Box>
 
-					{productsLoading ? (
-						<ProductSkeletonGrid count={4} />
-					) : (
-						<>
-							<TableContainer>
-								<Table>
-									<TableHead sx={{ bgcolor: "action.hover" }}>
-										<TableRow>
-											<TableCell sx={{ fontWeight: 700 }}>Image</TableCell>
-											<TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
-											<TableCell sx={{ fontWeight: 700 }}>Category</TableCell>
-											<TableCell sx={{ fontWeight: 700 }}>Price</TableCell>
-											<TableCell sx={{ fontWeight: 700 }}>Stock</TableCell>
-											<TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
-										</TableRow>
-									</TableHead>
-									<TableBody>
-										{products.map((product) => (
-											<TableRow key={product._id} hover>
-												<TableCell>
-													<Box
-														component="img"
-														src={product.imageUrl}
-														alt={product.name}
-														sx={{
-															width: 50,
-															height: 50,
-															objectFit: "contain",
-															borderRadius: 2,
-															bgcolor: "#fafafa",
-														}}
-													/>
-												</TableCell>
-												<TableCell>
-													<Typography fontWeight={600}>
-														{product.name}
-													</Typography>
-												</TableCell>
-												<TableCell>{product.category}</TableCell>
-												<TableCell>
-													<Typography fontWeight={600}>
-														${product.price}
-													</Typography>
-												</TableCell>
-												<TableCell>
-													<Chip
-														label={product.stock}
-														size="small"
-														color={product.stock > 0 ? "success" : "error"}
-													/>
-												</TableCell>
-												<TableCell>
-													<Stack direction="row" spacing={1}>
-														<Tooltip title="Edit">
-															<IconButton
-																size="small"
-																color="primary"
-																onClick={() => openEditProduct(product)}
-															>
-																<EditIcon />
-															</IconButton>
-														</Tooltip>
-														<Tooltip title="Delete">
-															<IconButton
-																size="small"
-																color="error"
-																onClick={() => setDeleteProductId(product._id)}
-															>
-																<DeleteIcon />
-															</IconButton>
-														</Tooltip>
-													</Stack>
-												</TableCell>
+						<AdminFilterToolbar
+							searchValue={productSearch}
+							onSearchChange={(value) => {
+								setProductSearch(value);
+								setProductPage(1);
+							}}
+							filters={[
+								{
+									key: "category",
+									label: "Category",
+									type: "select",
+									value: productCategory,
+									onChange: (value) => {
+										setProductCategory(value);
+										setProductPage(1);
+									},
+									options: [{ value: "All", label: "All Categories" }, ...(categoryOptions || []).map(c => ({ value: c, label: c }))],
+								},
+								{
+									key: "brand",
+									label: "Brand",
+									type: "select",
+									value: productBrand,
+									onChange: (value) => {
+										setProductBrand(value);
+										setProductPage(1);
+									},
+									options: [{ value: "All", label: "All Brands" }, ...(brandOptions || []).map(b => ({ value: b, label: b }))],
+								},
+								{
+									key: "stock",
+									label: "Stock Status",
+									type: "select",
+									value: productStockStatus,
+									onChange: (value) => {
+										setProductStockStatus(value);
+										setProductPage(1);
+									},
+									options: [
+										{ value: "all", label: "All Stock" },
+										{ value: "instock", label: "In Stock" },
+										{ value: "lowstock", label: "Low Stock" },
+										{ value: "outofstock", label: "Out of Stock" },
+									],
+								},
+								{
+									key: "minPrice",
+									label: "Min Price",
+									type: "text",
+									value: productMinPrice,
+									onChange: (value) => {
+										setProductMinPrice(value);
+										setProductPage(1);
+									},
+								},
+								{
+									key: "maxPrice",
+									label: "Max Price",
+									type: "text",
+									value: productMaxPrice,
+									onChange: (value) => {
+										setProductMaxPrice(value);
+										setProductPage(1);
+									},
+								},
+							]}
+							sort={{
+								value: productSortBy,
+								order: productSortOrder as "asc" | "desc",
+								onChange: setProductSortBy,
+								onOrderChange: setProductSortOrder,
+								options: [
+									{ value: "createdAt", label: "Newest" },
+									{ value: "price", label: "Price" },
+									{ value: "name", label: "Name" },
+								],
+							}}
+							onClearAll={clearProductFilters}
+							hasActiveFilters={productHasActiveFilters}
+							activeFilterChips={[
+								...(productCategory !== "All" ? [{ label: `Category: ${productCategory}`, onClear: () => { setProductCategory("All"); setProductPage(1); } }] : []),
+								...(productBrand !== "All" ? [{ label: `Brand: ${productBrand}`, onClear: () => { setProductBrand("All"); setProductPage(1); } }] : []),
+								...(productStockStatus !== "all" ? [{ label: `Stock: ${productStockStatus}`, onClear: () => { setProductStockStatus("all"); setProductPage(1); } }] : []),
+								...(productMinPrice ? [{ label: `Min Price: $${productMinPrice}`, onClear: () => { setProductMinPrice(""); setProductPage(1); } }] : []),
+								...(productMaxPrice ? [{ label: `Max Price: $${productMaxPrice}`, onClear: () => { setProductMaxPrice(""); setProductPage(1); } }] : []),
+							]}
+						/>
+
+						{productsLoading ? (
+							<ProductSkeletonGrid count={4} />
+						) : (
+							<>
+								<TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+									<Table>
+										<TableHead sx={{ bgcolor: "action.hover" }}>
+											<TableRow>
+												<TableCell sx={{ fontWeight: 700 }}>Image</TableCell>
+												<TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
+												<TableCell sx={{ fontWeight: 700 }}>Category</TableCell>
+												<TableCell sx={{ fontWeight: 700 }}>Price</TableCell>
+												<TableCell sx={{ fontWeight: 700 }}>Stock</TableCell>
+												<TableCell sx={{ fontWeight: 700 }}>Actions</TableCell>
 											</TableRow>
-										))}
-									</TableBody>
-								</Table>
-							</TableContainer>
-							{productsPagination && (
-								<Box px={3} pb={2}>
-									<PaginationComponent
-										pagination={productsPagination}
-										onPageChange={setProductPage}
-									/>
-								</Box>
-							)}
-						</>
-					)}
+										</TableHead>
+										<TableBody>
+											{products.map((product) => (
+												<TableRow key={product._id} hover>
+													<TableCell>
+														<Box
+															component="img"
+															src={product.imageUrl}
+															alt={product.name}
+															sx={{
+																width: 50,
+																height: 50,
+																objectFit: "contain",
+																borderRadius: 2,
+																bgcolor: "#fafafa",
+															}}
+														/>
+													</TableCell>
+													<TableCell>
+														<Typography fontWeight={600}>
+															{product.name}
+														</Typography>
+													</TableCell>
+													<TableCell>{product.category}</TableCell>
+													<TableCell>
+														<Typography fontWeight={600}>
+															${product.price}
+														</Typography>
+													</TableCell>
+													<TableCell>
+														<Chip
+															label={product.stock}
+															size="small"
+															color={product.stock > 0 ? "success" : "error"}
+															sx={{
+																whiteSpace: "nowrap",
+																overflow: "hidden",
+																textOverflow: "ellipsis",
+																minHeight: 28,
+																height: 28,
+																fontWeight: 700,
+															}}
+														/>
+													</TableCell>
+													<TableCell>
+														<Stack direction="row" spacing={1}>
+															<Tooltip title="Edit">
+																<IconButton
+																	size="small"
+																	color="primary"
+																	onClick={() => openEditProduct(product)}
+																>
+																	<EditIcon />
+																</IconButton>
+															</Tooltip>
+															<Tooltip title="Delete">
+																<IconButton
+																	size="small"
+																	color="error"
+																	onClick={() =>
+																		setDeleteProductId(product._id)
+																	}
+																>
+																	<DeleteIcon />
+																</IconButton>
+															</Tooltip>
+														</Stack>
+													</TableCell>
+												</TableRow>
+											))}
+										</TableBody>
+									</Table>
+								</TableContainer>
+								{productsPagination && (
+									<Box ref={productRef} px={3} pb={2}>
+										<PaginationComponent
+											pagination={productsPagination}
+											onPageChange={(p) => {
+												setProductPage(p);
+												scrollProducts();
+											}}
+										/>
+									</Box>
+								)}
+							</>
+						)}
+					</Box>
 				</TabPanel>
 
 				<TabPanel value={tabIndex} index={1}>
@@ -971,6 +2207,94 @@ export const AdminDashboard: React.FC = () => {
 						<Typography variant="h6" fontWeight={700} mb={3}>
 							All Orders
 						</Typography>
+
+						<AdminFilterToolbar
+							searchValue={orderSearch}
+							onSearchChange={(value) => {
+								setOrderSearch(value);
+								setOrderPage(1);
+							}}
+							filters={[
+								{
+									key: "status",
+									label: "Status",
+									type: "select",
+									value: orderStatus,
+									onChange: (value) => {
+										setOrderStatus(value);
+										setOrderPage(1);
+									},
+									options: [
+										{ value: "", label: "All Statuses" },
+										{ value: "pending", label: "Pending" },
+										{ value: "processing", label: "Processing" },
+										{ value: "shipped", label: "Shipped" },
+										{ value: "delivered", label: "Delivered" },
+										{ value: "cancelled", label: "Cancelled" },
+									],
+								},
+								{
+									key: "startDate",
+									label: "From Date",
+									type: "date",
+									value: orderStartDate,
+									onChange: (value) => {
+										setOrderStartDate(value);
+										setOrderPage(1);
+									},
+								},
+								{
+									key: "endDate",
+									label: "To Date",
+									type: "date",
+									value: orderEndDate,
+									onChange: (value) => {
+										setOrderEndDate(value);
+										setOrderPage(1);
+									},
+								},
+								{
+									key: "minPrice",
+									label: "Min Amount",
+									type: "text",
+									value: orderMinPrice,
+									onChange: (value) => {
+										setOrderMinPrice(value);
+										setOrderPage(1);
+									},
+								},
+								{
+									key: "maxPrice",
+									label: "Max Amount",
+									type: "text",
+									value: orderMaxPrice,
+									onChange: (value) => {
+										setOrderMaxPrice(value);
+										setOrderPage(1);
+									},
+								},
+							]}
+							sort={{
+								value: orderSortBy,
+								order: orderSortOrder as "asc" | "desc",
+								onChange: setOrderSortBy,
+								onOrderChange: setOrderSortOrder,
+								options: [
+									{ value: "createdAt", label: "Newest" },
+									{ value: "totalAmount", label: "Amount" },
+								],
+							}}
+							onClearAll={clearOrderFilters}
+							hasActiveFilters={orderHasActiveFilters}
+							activeFilterChips={[
+								...(orderStatus ? [{ label: `Status: ${orderStatus}`, onClear: () => { setOrderStatus(""); setOrderPage(1); } }] : []),
+								...(orderStartDate ? [{ label: `From: ${orderStartDate}`, onClear: () => { setOrderStartDate(""); setOrderPage(1); } }] : []),
+								...(orderEndDate ? [{ label: `To: ${orderEndDate}`, onClear: () => { setOrderEndDate(""); setOrderPage(1); } }] : []),
+								...(orderMinPrice ? [{ label: `Min: $${orderMinPrice}`, onClear: () => { setOrderMinPrice(""); setOrderPage(1); } }] : []),
+								...(orderMaxPrice ? [{ label: `Max: $${orderMaxPrice}`, onClear: () => { setOrderMaxPrice(""); setOrderPage(1); } }] : []),
+							]}
+						/>
+
 						{ordersLoading ? (
 							<TableContainer component={Paper}>
 								<Table>
@@ -1031,20 +2355,32 @@ export const AdminDashboard: React.FC = () => {
 																).toUpperCase()}
 																color={statusColors[order.status || "pending"]}
 																size="small"
-																sx={{ fontWeight: 700 }}
+																sx={{
+																	whiteSpace: "nowrap",
+																	overflow: "hidden",
+																	textOverflow: "ellipsis",
+																	minHeight: 28,
+																	height: 28,
+																	fontWeight: 700,
+																}}
 															/>
 														</TableCell>
 														<TableCell>
 															{new Date(order.createdAt!).toLocaleDateString()}
 														</TableCell>
 														<TableCell>
-															<Button
-																size="small"
-																variant="outlined"
-																onClick={() => handleOpenStatus(order)}
-															>
-																Update
-															</Button>
+															<Tooltip title={order.status === "cancelled" ? "Cancelled orders cannot be modified" : ""}>
+																<span>
+																	<Button
+																		size="small"
+																		variant="outlined"
+																		onClick={() => handleOpenStatus(order)}
+																		disabled={order.status === "cancelled"}
+																	>
+																		Update
+																	</Button>
+																</span>
+															</Tooltip>
 														</TableCell>
 													</TableRow>
 												);
@@ -1053,10 +2389,13 @@ export const AdminDashboard: React.FC = () => {
 									</Table>
 								</TableContainer>
 								{ordersPagination && (
-									<Box mt={2}>
+									<Box ref={orderRef} mt={2} pb={2}>
 										<PaginationComponent
 											pagination={ordersPagination}
-											onPageChange={setOrderPage}
+											onPageChange={(p) => {
+												setOrderPage(p);
+												scrollOrders();
+											}}
 										/>
 									</Box>
 								)}
@@ -1084,6 +2423,86 @@ export const AdminDashboard: React.FC = () => {
 								Add User
 							</Button>
 						</Box>
+
+						<AdminFilterToolbar
+							searchValue={userSearch}
+							onSearchChange={(value) => {
+								setUserSearch(value);
+								setUserPage(1);
+							}}
+							filters={[
+								{
+									key: "role",
+									label: "Role",
+									type: "select",
+									value: userRole,
+									onChange: (value) => {
+										setUserRole(value);
+										setUserPage(1);
+									},
+									options: [
+										{ value: "", label: "All Roles" },
+										{ value: "user", label: "User" },
+										{ value: "admin", label: "Admin" },
+									],
+								},
+								{
+									key: "isActive",
+									label: "Status",
+									type: "select",
+									value: userIsActive,
+									onChange: (value) => {
+										setUserIsActive(value);
+										setUserPage(1);
+									},
+									options: [
+										{ value: "", label: "All Statuses" },
+										{ value: "true", label: "Active" },
+										{ value: "false", label: "Inactive" },
+									],
+								},
+								{
+									key: "startDate",
+									label: "Joined From",
+									type: "date",
+									value: userStartDate,
+									onChange: (value) => {
+										setUserStartDate(value);
+										setUserPage(1);
+									},
+								},
+								{
+									key: "endDate",
+									label: "Joined To",
+									type: "date",
+									value: userEndDate,
+									onChange: (value) => {
+										setUserEndDate(value);
+										setUserPage(1);
+									},
+								},
+							]}
+							sort={{
+								value: userSortBy,
+								order: userSortOrder as "asc" | "desc",
+								onChange: setUserSortBy,
+								onOrderChange: setUserSortOrder,
+								options: [
+									{ value: "createdAt", label: "Newest" },
+									{ value: "firstName", label: "First Name" },
+									{ value: "lastName", label: "Last Name" },
+								],
+							}}
+							onClearAll={clearUserFilters}
+							hasActiveFilters={userHasActiveFilters}
+							activeFilterChips={[
+								...(userRole ? [{ label: `Role: ${userRole}`, onClear: () => { setUserRole(""); setUserPage(1); } }] : []),
+								...(userIsActive ? [{ label: `Status: ${userIsActive === "true" ? "Active" : "Inactive"}`, onClear: () => { setUserIsActive(""); setUserPage(1); } }] : []),
+								...(userStartDate ? [{ label: `Joined From: ${userStartDate}`, onClear: () => { setUserStartDate(""); setUserPage(1); } }] : []),
+								...(userEndDate ? [{ label: `Joined To: ${userEndDate}`, onClear: () => { setUserEndDate(""); setUserPage(1); } }] : []),
+							]}
+						/>
+
 						{usersLoading ? (
 							<TableContainer component={Paper}>
 								<Table>
@@ -1121,7 +2540,14 @@ export const AdminDashboard: React.FC = () => {
 																user.role === "admin" ? "secondary" : "default"
 															}
 															size="small"
-															sx={{ fontWeight: 700 }}
+															sx={{
+																whiteSpace: "nowrap",
+																overflow: "hidden",
+																textOverflow: "ellipsis",
+																minHeight: 28,
+																height: 28,
+																fontWeight: 700,
+															}}
 														/>
 													</TableCell>
 													<TableCell>
@@ -1157,10 +2583,13 @@ export const AdminDashboard: React.FC = () => {
 									</Table>
 								</TableContainer>
 								{usersPagination && (
-									<Box mt={2}>
+									<Box ref={userRef} mt={2} pb={2}>
 										<PaginationComponent
 											pagination={usersPagination}
-											onPageChange={setUserPage}
+											onPageChange={(p) => {
+												setUserPage(p);
+												scrollUsers();
+											}}
 										/>
 									</Box>
 								)}
@@ -1188,6 +2617,108 @@ export const AdminDashboard: React.FC = () => {
 								Add Coupon
 							</Button>
 						</Box>
+
+						<AdminFilterToolbar
+							searchValue={couponSearch}
+							onSearchChange={(value) => {
+								setCouponSearch(value);
+								setCouponPage(1);
+							}}
+							filters={[
+								{
+									key: "status",
+									label: "Status",
+									type: "select",
+									value: couponStatus,
+									onChange: (value) => {
+										setCouponStatus(value);
+										setCouponPage(1);
+									},
+									options: [
+										{ value: "", label: "All Statuses" },
+										{ value: "active", label: "Active" },
+										{ value: "inactive", label: "Inactive" },
+										{ value: "expired", label: "Expired" },
+									],
+								},
+								{
+									key: "discountType",
+									label: "Discount Type",
+									type: "select",
+									value: couponDiscountType,
+									onChange: (value) => {
+										setCouponDiscountType(value);
+										setCouponPage(1);
+									},
+									options: [
+										{ value: "", label: "All Types" },
+										{ value: "percentage", label: "Percentage" },
+										{ value: "fixed", label: "Fixed" },
+									],
+								},
+								{
+									key: "minDiscount",
+									label: "Min Discount",
+									type: "text",
+									value: couponMinDiscount,
+									onChange: (value) => {
+										setCouponMinDiscount(value);
+										setCouponPage(1);
+									},
+								},
+								{
+									key: "maxDiscount",
+									label: "Max Discount",
+									type: "text",
+									value: couponMaxDiscount,
+									onChange: (value) => {
+										setCouponMaxDiscount(value);
+										setCouponPage(1);
+									},
+								},
+								{
+									key: "startDate",
+									label: "Created From",
+									type: "date",
+									value: couponStartDate,
+									onChange: (value) => {
+										setCouponStartDate(value);
+										setCouponPage(1);
+									},
+								},
+								{
+									key: "endDate",
+									label: "Created To",
+									type: "date",
+									value: couponEndDate,
+									onChange: (value) => {
+										setCouponEndDate(value);
+										setCouponPage(1);
+									},
+								},
+							]}
+							sort={{
+								value: couponSortBy,
+								order: couponSortOrder as "asc" | "desc",
+								onChange: setCouponSortBy,
+								onOrderChange: setCouponSortOrder,
+								options: [
+									{ value: "createdAt", label: "Newest" },
+									{ value: "expiresAt", label: "Expiration Date" },
+									{ value: "discountPercent", label: "Discount %" },
+								],
+							}}
+							onClearAll={clearCouponFilters}
+							hasActiveFilters={couponHasActiveFilters}
+							activeFilterChips={[
+								...(couponStatus ? [{ label: `Status: ${couponStatus}`, onClear: () => { setCouponStatus(""); setCouponPage(1); } }] : []),
+								...(couponDiscountType ? [{ label: `Type: ${couponDiscountType}`, onClear: () => { setCouponDiscountType(""); setCouponPage(1); } }] : []),
+								...(couponMinDiscount ? [{ label: `Min Discount: ${couponMinDiscount}`, onClear: () => { setCouponMinDiscount(""); setCouponPage(1); } }] : []),
+								...(couponMaxDiscount ? [{ label: `Max Discount: ${couponMaxDiscount}`, onClear: () => { setCouponMaxDiscount(""); setCouponPage(1); } }] : []),
+								...(couponStartDate ? [{ label: `Created From: ${couponStartDate}`, onClear: () => { setCouponStartDate(""); setCouponPage(1); } }] : []),
+								...(couponEndDate ? [{ label: `Created To: ${couponEndDate}`, onClear: () => { setCouponEndDate(""); setCouponPage(1); } }] : []),
+							]}
+						/>
 
 						{couponsLoading ? (
 							<TableContainer component={Paper}>
@@ -1236,22 +2767,68 @@ export const AdminDashboard: React.FC = () => {
 														label={coupon.isActive ? "Active" : "Inactive"}
 														color={coupon.isActive ? "success" : "default"}
 														size="small"
+														sx={{
+															whiteSpace: "nowrap",
+															overflow: "hidden",
+															textOverflow: "ellipsis",
+															minHeight: 28,
+															height: 28,
+															fontWeight: 700,
+														}}
 													/>
 												</TableCell>
 												<TableCell>
-													<IconButton
-														size="small"
-														color="error"
-														onClick={() => setDeleteCouponId(coupon._id)}
-													>
-														<DeleteIcon />
-													</IconButton>
+													<Stack direction="row" spacing={0.5}>
+														<Tooltip title="Edit">
+															<IconButton
+																size="small"
+																color="primary"
+																onClick={() => {
+																	setEditCouponId(coupon._id);
+																	setCouponForm({
+																		code: coupon.code,
+																		discountType: coupon.discountType || "percentage",
+																		discountPercent: coupon.discountPercent,
+																		discountValue: coupon.discountValue ?? 0,
+																		minOrderAmount: coupon.minOrderAmount,
+																		expiresAt: coupon.expiresAt
+																			? new Date(coupon.expiresAt)
+																					.toISOString()
+																					.slice(0, 16)
+																			: "",
+																		usageLimit: coupon.usageLimit,
+																		isActive: coupon.isActive,
+																	});
+																	setCouponDialogOpen(true);
+																}}
+															>
+																<EditIcon />
+															</IconButton>
+														</Tooltip>
+														<Tooltip title="Delete">
+															<IconButton
+																size="small"
+																color="error"
+																onClick={() => setDeleteCouponId(coupon._id)}
+															>
+																<DeleteIcon />
+															</IconButton>
+														</Tooltip>
+													</Stack>
 												</TableCell>
 											</TableRow>
 										))}
 									</TableBody>
 								</Table>
 							</TableContainer>
+						)}
+						{couponsPagination && (
+							<Box px={3} pb={2}>
+								<PaginationComponent
+									pagination={couponsPagination}
+									onPageChange={setCouponPage}
+								/>
+							</Box>
 						)}
 					</Box>
 				</TabPanel>
@@ -1418,6 +2995,7 @@ export const AdminDashboard: React.FC = () => {
 								label="Status"
 								value={newStatus}
 								onChange={(e) => setNewStatus(e.target.value as OrderStatus)}
+								size="small"
 							>
 								{(
 									[
@@ -1469,7 +3047,7 @@ export const AdminDashboard: React.FC = () => {
 				<DialogContent>
 					<Stack spacing={2} mt={1}>
 						<Grid container spacing={2}>
-							<Grid item xs={6}>
+							<Grid item xs={12} sm={6}>
 								<TextField
 									fullWidth
 									label="First Name"
@@ -1477,9 +3055,10 @@ export const AdminDashboard: React.FC = () => {
 									onChange={(e) =>
 										setUserForm({ ...userForm, firstName: e.target.value })
 									}
+									size="small"
 								/>
 							</Grid>
-							<Grid item xs={6}>
+							<Grid item xs={12} sm={6}>
 								<TextField
 									fullWidth
 									label="Last Name"
@@ -1487,6 +3066,7 @@ export const AdminDashboard: React.FC = () => {
 									onChange={(e) =>
 										setUserForm({ ...userForm, lastName: e.target.value })
 									}
+									size="small"
 								/>
 							</Grid>
 						</Grid>
@@ -1498,6 +3078,7 @@ export const AdminDashboard: React.FC = () => {
 							onChange={(e) =>
 								setUserForm({ ...userForm, email: e.target.value })
 							}
+							size="small"
 						/>
 						<TextField
 							fullWidth
@@ -1510,6 +3091,7 @@ export const AdminDashboard: React.FC = () => {
 								setUserForm({ ...userForm, password: e.target.value })
 							}
 							required={!editingUser}
+							size="small"
 						/>
 						<TextField
 							fullWidth
@@ -1522,6 +3104,7 @@ export const AdminDashboard: React.FC = () => {
 									role: e.target.value as "user" | "admin",
 								})
 							}
+							size="small"
 						>
 							<MenuItem value="user">User</MenuItem>
 							<MenuItem value="admin">Admin</MenuItem>
@@ -1598,11 +3181,14 @@ export const AdminDashboard: React.FC = () => {
 			{/* Coupon Dialog */}
 			<Dialog
 				open={couponDialogOpen}
-				onClose={() => setCouponDialogOpen(false)}
+				onClose={() => {
+									setCouponDialogOpen(false);
+									setEditCouponId(null);
+								}}
 				fullWidth
 				maxWidth="md"
 			>
-				<DialogTitle fontWeight={700}>Create Coupon</DialogTitle>
+				<DialogTitle fontWeight={700}>{editCouponId ? "Edit Coupon" : "Create Coupon"}</DialogTitle>
 				<DialogContent>
 					<Grid container spacing={2} sx={{ mt: 0.5 }}>
 						<Grid item xs={12} sm={6}>
@@ -1702,15 +3288,24 @@ export const AdminDashboard: React.FC = () => {
 								toast.error("Coupon code is required");
 								return;
 							}
-							saveCouponMutation.mutate({
-								...couponForm,
-								code: couponForm.code.trim().toUpperCase(),
-								expiresAt: new Date(couponForm.expiresAt).toISOString(),
-							});
+							if (editCouponId) {
+								updateCouponMutation.mutate({
+									...couponForm,
+									id: editCouponId,
+									code: couponForm.code.trim().toUpperCase(),
+									expiresAt: new Date(couponForm.expiresAt).toISOString(),
+								});
+							} else {
+								saveCouponMutation.mutate({
+									...couponForm,
+									code: couponForm.code.trim().toUpperCase(),
+									expiresAt: new Date(couponForm.expiresAt).toISOString(),
+								});
+							}
 						}}
-						disabled={saveCouponMutation.isPending}
+						disabled={saveCouponMutation.isPending || updateCouponMutation.isPending}
 					>
-						{saveCouponMutation.isPending ? "Saving..." : "Save Coupon"}
+						{editCouponId ? "Update Coupon" : "Save Coupon"}
 					</Button>
 				</DialogActions>
 			</Dialog>

@@ -100,6 +100,7 @@ export interface IProductQuery {
 	minPrice?: number | string;
 	maxPrice?: number | string;
 	inStock?: boolean;
+	stockStatus?: string;
 	sortBy?: string;
 	sortOrder?: "asc" | "desc";
 }
@@ -109,6 +110,9 @@ export interface IUserQuery {
 	limit?: number;
 	search?: string;
 	role?: string;
+	isActive?: string | boolean;
+	startDate?: string;
+	endDate?: string;
 	sortBy?: string;
 	sortOrder?: "asc" | "desc";
 }
@@ -117,6 +121,25 @@ export interface IOrderQuery {
 	page?: number;
 	limit?: number;
 	search?: string;
+	status?: string;
+	minPrice?: number | string;
+	maxPrice?: number | string;
+	startDate?: string;
+	endDate?: string;
+	sortBy?: string;
+	sortOrder?: "asc" | "desc";
+}
+
+export interface ICouponQuery {
+	page?: number;
+	limit?: number;
+	search?: string;
+	status?: string;
+	discountType?: string;
+	minDiscount?: number | string;
+	maxDiscount?: number | string;
+	startDate?: string;
+	endDate?: string;
 	sortBy?: string;
 	sortOrder?: "asc" | "desc";
 }
@@ -182,37 +205,149 @@ export interface IReviewResponse {
 
 export interface IAnalyticsRevenue {
 	totalRevenue: number;
-	totalOrders: number;
+	revenueToday: number;
+	revenueThisWeek: number;
+	revenueThisMonth: number;
+	revenueThisYear: number;
 	avgOrderValue: number;
+	revenueGrowth: number;
 }
 
-export interface IAnalyticsRevenueByMonth {
-	month: string;
-	revenue: number;
-	orders: number;
+export interface IAnalyticsOrders {
+	totalOrders: number;
+	ordersToday: number;
+	ordersThisWeek: number;
+	ordersThisMonth: number;
+	pending: number;
+	processing: number;
+	shipped: number;
+	delivered: number;
+	cancelled: number;
+	completionRate: number;
+	cancellationRate: number;
 }
 
-export interface IAnalyticsTopSelling {
-	_id: string;
-	totalQuantity: number;
-	totalRevenue: number;
+export interface IAnalyticsProductItem {
+	_id?: string;
+	name?: string;
+	image?: string;
+	imageUrl?: string;
+	totalQuantity?: number;
+	totalRevenue?: number;
+	category?: string;
+	stock?: number;
+	createdAt?: string;
 }
 
-export interface IAnalyticsStock {
-	lowStock: number;
+export interface IAnalyticsProducts {
+	totalProducts: number;
+	activeProducts: number;
 	outOfStock: number;
+	lowStock: number;
+	topSelling: IAnalyticsProductItem[];
+	bottomSelling: IAnalyticsProductItem[];
+	neverOrdered: IAnalyticsProductItem[];
+	lowStockProducts: IAnalyticsProductItem[];
+	outOfStockProducts: IAnalyticsProductItem[];
+	highestRevenue: IAnalyticsProductItem[];
+	recentlyAdded: IAnalyticsProductItem[];
 }
 
-export interface IAnalyticsTotals {
-	users: number;
-	products: number;
+export interface IAnalyticsInventoryItem {
+	_id?: string;
+	name?: string;
+	category?: string;
+	stock?: number;
+	status?: string;
+}
+
+export interface IAnalyticsInventory {
+	lowStock: IAnalyticsInventoryItem[];
+	outOfStock: IAnalyticsInventoryItem[];
+}
+
+export interface IAnalyticsCustomerItem {
+	userId?: string;
+	firstName?: string;
+	lastName?: string;
+	email?: string;
+	totalSpent?: number;
+	orderCount?: number;
+	lastOrderDate?: string;
+}
+
+export interface IAnalyticsCustomers {
+	totalUsers: number;
+	newUsersToday: number;
+	newUsersThisMonth: number;
+	returningCustomers: number;
+	highestSpending: IAnalyticsCustomerItem[];
+	mostOrders: IAnalyticsCustomerItem[];
+}
+
+export interface IAnalyticsCouponItem {
+	code?: string;
+	discountPercent?: number;
+	usedCount?: number;
+	usageLimit?: number;
+}
+
+export interface IAnalyticsCoupons {
+totalCoupons: number;
+		activeCoupons: number;
+		expiredCoupons: number;
+		inactiveCoupons: number;
+		mostUsedCoupons: IAnalyticsCouponItem[];
+	neverUsedCoupons: IAnalyticsCouponItem[];
+	totalDiscountsGiven: number;
+}
+
+export interface IAnalyticsCategoryItem {
+	category?: string;
+	revenue?: number;
+	orders?: number;
+}
+
+export interface IAnalyticsCategories {
+	revenueByCategory: IAnalyticsCategoryItem[];
+	ordersByCategory: IAnalyticsCategoryItem[];
+	bestCategory: IAnalyticsCategoryItem | null;
+	worstCategory: IAnalyticsCategoryItem | null;
+}
+
+export interface IAnalyticsChartItem {
+	label: string;
+	revenue?: number;
+	orders?: number;
+}
+
+export interface IAnalyticsCharts {
+	dailyRevenue: IAnalyticsChartItem[];
+	weeklyRevenue: IAnalyticsChartItem[];
+	monthlyRevenue: IAnalyticsChartItem[];
+	yearlyRevenue: IAnalyticsChartItem[];
+	ordersOverTime: IAnalyticsChartItem[];
+}
+
+export interface IAnalyticsInsight {
+	bestSellingProduct: IAnalyticsProductItem | null;
+	worstSellingProduct: IAnalyticsProductItem | null;
+	fastestGrowingCategory: IAnalyticsCategoryItem | null;
+	slowestCategory: IAnalyticsCategoryItem | null;
+	highestSpendingCustomer: IAnalyticsCustomerItem | null;
+	mostActiveCustomer: IAnalyticsCustomerItem | null;
+	avgProductsPerOrder: number;
+	avgRevenuePerCustomer: number;
 }
 
 export interface IAnalytics {
 	revenue: IAnalyticsRevenue;
-	revenueByMonth: IAnalyticsRevenueByMonth[];
-	ordersByStatus: Record<string, number>;
-	topSelling: IAnalyticsTopSelling[];
-	stock: IAnalyticsStock;
-	totals: IAnalyticsTotals;
+	orders: IAnalyticsOrders;
+	products: IAnalyticsProducts;
+	inventory: IAnalyticsInventory;
+	customers: IAnalyticsCustomers;
+	coupons: IAnalyticsCoupons;
+	categories: IAnalyticsCategories;
+	charts: IAnalyticsCharts;
+	insights: IAnalyticsInsight;
 }

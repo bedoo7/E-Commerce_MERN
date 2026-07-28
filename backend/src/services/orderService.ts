@@ -1,4 +1,6 @@
+import mongoose from "mongoose";
 import { orderModel, IOrder } from "../models/orderModel";
+import { productModel } from "../models/productModel";
 import {
 	buildPaginatedResponse,
 	parsePaginationParams,
@@ -9,6 +11,11 @@ export interface OrderQueryParams {
 	page?: string | number;
 	limit?: string | number;
 	search?: string;
+	status?: string;
+	minPrice?: string | number;
+	maxPrice?: string | number;
+	startDate?: string;
+	endDate?: string;
 	sortBy?: string;
 	sortOrder?: string;
 }
@@ -55,40 +62,108 @@ export const getUserOrders = async (
 export const getAllOrders = async (
 	queryParams: OrderQueryParams = {},
 ): Promise<PaginatedResponse<IOrder>> => {
-	const { page, limit, skip, sortBy, sortOrder } =
-		parsePaginationParams(queryParams);
+	try {
+		const { page, limit, skip, sortBy, sortOrder } =
+			parsePaginationParams(queryParams);
 
-	const filter: Record<string, any> = {};
+		const match: Record<string, any> = {};
 
-	if (queryParams.search && queryParams.search.trim()) {
-		const searchRegex = new RegExp(queryParams.search.trim(), "i");
-		filter.$or = [
-			{ address: searchRegex },
-			{ "orderItems.productTitle": searchRegex },
+		if (queryParams.search && queryParams.search.trim()) {
+			const searchRegex = new RegExp(queryParams.search.trim(), "i");
+			match.$or = [
+				{ orderNumber: searchRegex },
+				{ address: searchRegex },
+				{ "orderItems.productTitle": searchRegex },
+			];
+		}
+
+		if (queryParams.status) {
+			match.status = queryParams.status;
+		}
+
+		if (
+			queryParams.minPrice !== undefined ||
+			queryParams.maxPrice !== undefined
+		) {
+			match.totalAmount = {};
+			if (queryParams.minPrice !== undefined && queryParams.minPrice !== "") {
+				match.totalAmount.$gte = Number(queryParams.minPrice);
+			}
+			if (queryParams.maxPrice !== undefined && queryParams.maxPrice !== "") {
+				match.totalAmount.$lte = Number(queryParams.maxPrice);
+			}
+		}
+
+		if (queryParams.startDate) {
+			match.createdAt = match.createdAt || {};
+			match.createdAt.$gte = new Date(queryParams.startDate);
+		}
+		if (queryParams.endDate) {
+			match.createdAt = match.createdAt || {};
+			match.createdAt.$lte = new Date(queryParams.endDate);
+		}
+
+		const allowedSortFields = ["createdAt", "totalAmount"];
+		const sortField = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
+
+		const pipeline: any[] = [
+			{ $match: match },
+			{
+				$lookup: {
+					from: "users",
+					localField: "userId",
+					foreignField: "_id",
+					as: "userLookup",
+				},
+			},
+			{ $unwind: { path: "$userLookup", preserveNullAndEmptyArrays: true } },
 		];
+
+		if (queryParams.search && queryParams.search.trim()) {
+			const searchRegex = new RegExp(queryParams.search.trim(), "i");
+			pipeline[0].$match.$or = [
+				{ orderNumber: searchRegex },
+				{ address: searchRegex },
+				{ "orderItems.productTitle": searchRegex },
+				{ "userLookup.firstName": searchRegex },
+				{ "userLookup.lastName": searchRegex },
+				{ "userLookup.email": searchRegex },
+			];
+		}
+
+		pipeline.push(
+			{ $sort: { [sortField]: sortOrder } },
+			{ $skip: skip },
+			{ $limit: limit },
+		);
+
+		const [orders, totalItems] = await Promise.all([
+			orderModel.aggregate(pipeline),
+			orderModel.countDocuments(match),
+		]);
+
+		const ordersWithStatus = orders.map((order: any) => ({
+			...order,
+			userId: order.userLookup
+				? {
+						_id: order.userLookup._id,
+						firstName: order.userLookup.firstName,
+						lastName: order.userLookup.lastName,
+						email: order.userLookup.email,
+					}
+				: order.userId,
+			status: (order.status || "pending") as IOrder["status"],
+		}));
+
+		return buildPaginatedResponse(
+			ordersWithStatus as IOrder[],
+			totalItems,
+			page,
+			limit,
+		);
+	} catch (error: any) {
+		throw new Error(error.message);
 	}
-
-	const allowedSortFields = ["createdAt", "totalAmount"];
-	const sortField = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
-
-	const [orders, totalItems] = await Promise.all([
-		orderModel
-			.find(filter)
-			.populate("userId", "firstName lastName email")
-			.sort({ [sortField]: sortOrder })
-			.skip(skip)
-			.limit(limit)
-			.lean(),
-		orderModel.countDocuments(filter),
-	]);
-
-	// Ensure every order has a status field
-	const ordersWithStatus = orders.map((order) => ({
-		...order,
-		status: (order.status || "pending") as IOrder["status"],
-	})) as unknown as IOrder[];
-
-	return buildPaginatedResponse(ordersWithStatus, totalItems, page, limit);
 };
 
 export const getOrderById = async (orderId: string, userId?: string) => {
@@ -127,14 +202,49 @@ export const updateOrderStatus = async (orderId: string, status: string) => {
 				`Invalid status. Must be one of: ${validStatuses.join(", ")}`,
 			);
 		}
-		const order = await orderModel
-			.findByIdAndUpdate(orderId, { status }, { new: true })
-			.populate("userId", "firstName lastName email")
-			.lean();
+
+		if (status === "cancelled") {
+			const updatedOrder = await orderModel
+				.findOneAndUpdate(
+					{ _id: orderId, status: { $ne: "cancelled" } },
+					{
+						status: "cancelled",
+						cancelledAt: new Date(),
+					},
+					{ new: true },
+				)
+				.populate("userId", "firstName lastName email")
+				.lean();
+
+			if (!updatedOrder) {
+				throw new Error("Cannot update a cancelled order.");
+			}
+
+			for (const item of updatedOrder.orderItems) {
+				await productModel.findOneAndUpdate(
+					{ name: item.productTitle },
+					{ $inc: { stock: item.quantity } },
+				);
+			}
+
+			return updatedOrder;
+		}
+
+		const order = await orderModel.findById(orderId).lean();
 		if (!order) {
 			throw new Error("Order not found");
 		}
-		return order;
+
+		if (order.status === "cancelled") {
+			throw new Error("Cannot update a cancelled order.");
+		}
+
+		const updatedOrder = await orderModel
+			.findByIdAndUpdate(orderId, { status }, { new: true })
+			.populate("userId", "firstName lastName email")
+			.lean();
+
+		return updatedOrder;
 	} catch (error: any) {
 		throw new Error(error.message);
 	}
@@ -146,28 +256,13 @@ export const cancelOrder = async (
 	cancelReason: string,
 ) => {
 	try {
-		const order = await orderModel.findById(orderId);
-		if (!order) {
-			throw new Error("Order not found");
-		}
-
-		if (order.userId.toString() !== userId) {
-			throw new Error("You can only cancel your own orders");
-		}
-
-		if (order.status !== "pending") {
-			throw new Error(
-				`Cannot cancel order with status "${order.status}". Only pending orders can be cancelled.`,
-			);
-		}
-
-		if (order.status === "cancelled") {
-			throw new Error("Order is already cancelled");
-		}
-
 		const updatedOrder = await orderModel
-			.findByIdAndUpdate(
-				orderId,
+			.findOneAndUpdate(
+				{
+					_id: orderId,
+					userId: new mongoose.Types.ObjectId(userId),
+					status: "pending",
+				} as any,
 				{
 					status: "cancelled",
 					cancelledAt: new Date(),
@@ -180,7 +275,23 @@ export const cancelOrder = async (
 			.lean();
 
 		if (!updatedOrder) {
-			throw new Error("Failed to cancel order");
+			const existingOrder = await orderModel.findById(orderId).lean();
+			if (!existingOrder) {
+				throw new Error("Order not found");
+			}
+			if (existingOrder.status === "cancelled") {
+				throw new Error("Order is already cancelled");
+			}
+			throw new Error(
+				`Cannot cancel order with status "${existingOrder.status}". Only pending orders can be cancelled.`,
+			);
+		}
+
+		for (const item of updatedOrder.orderItems) {
+			await productModel.findOneAndUpdate(
+				{ name: item.productTitle },
+				{ $inc: { stock: item.quantity } },
+			);
 		}
 
 		return updatedOrder;

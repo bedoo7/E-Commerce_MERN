@@ -35,6 +35,7 @@ import { EmptyState } from "../components/common/EmptyState";
 import { useAuth } from "../context/AuthContext";
 import { useSearchParams, Link } from "react-router-dom";
 import { useDebounce } from "../hooks/useDebounce";
+import { usePaginationScroll } from "../hooks/usePaginationScroll";
 import {
 	luxeFilterPanel,
 	luxeGlassPanel,
@@ -80,6 +81,7 @@ export const Home: React.FC = () => {
 	const [limit, setLimit] = useState(12);
 	const [showFilters, setShowFilters] = useState(false);
 	const debouncedSearch = useDebounce(search, 400);
+	const { containerRef, scrollToTop } = usePaginationScroll();
 
 	// Keep the local filter state in sync with footer navigation links
 	useEffect(() => {
@@ -257,6 +259,11 @@ export const Home: React.FC = () => {
 		setMaxPrice("");
 		setInStock(false);
 		setPage(1);
+	};
+
+	const handlePageChange = (p: number) => {
+		setPage(p);
+		scrollToTop();
 	};
 
 	const hasActiveFilters =
@@ -1046,14 +1053,16 @@ export const Home: React.FC = () => {
 						))}
 					</Grid>
 					{pagination && (
-						<PaginationComponent
-							pagination={pagination}
-							onPageChange={setPage}
-							onLimitChange={(l) => {
-								setLimit(l);
-								setPage(1);
-							}}
-						/>
+						<Box ref={containerRef}>
+							<PaginationComponent
+								pagination={pagination}
+								onPageChange={handlePageChange}
+								onLimitChange={(l) => {
+									setLimit(l);
+									setPage(1);
+								}}
+							/>
+						</Box>
 					)}
 				</>
 			) : (

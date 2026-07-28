@@ -12,6 +12,9 @@ export interface UserQueryParams {
 	limit?: string | number;
 	search?: string;
 	role?: string;
+	isActive?: string | boolean;
+	startDate?: string;
+	endDate?: string;
 	sortBy?: string;
 	sortOrder?: string;
 }
@@ -186,6 +189,23 @@ export const getAllUsers = async (
 
 		if (queryParams.role && ["user", "admin"].includes(queryParams.role)) {
 			filter.role = queryParams.role;
+		}
+
+		if (
+			queryParams.isActive !== undefined &&
+			queryParams.isActive !== ""
+		) {
+			filter.isActive =
+				queryParams.isActive === "true" || queryParams.isActive === true;
+		}
+
+		if (queryParams.startDate) {
+			filter.createdAt = filter.createdAt || {};
+			filter.createdAt.$gte = new Date(queryParams.startDate);
+		}
+		if (queryParams.endDate) {
+			filter.createdAt = filter.createdAt || {};
+			filter.createdAt.$lte = new Date(queryParams.endDate);
 		}
 
 		const allowedSortFields = [
