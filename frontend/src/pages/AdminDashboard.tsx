@@ -65,6 +65,12 @@ import {
 } from "../components/common/LoadingSkeletons";
 import { PaginationComponent } from "../components/common/PaginationComponent";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
+import {
+	luxeTableContainer,
+	luxeDialogPaper,
+	luxeSurface,
+	luxeStickySummary,
+} from "../theme/luxeStyles";
 import toast from "react-hot-toast";
 
 const statusColors: Record<
@@ -616,13 +622,11 @@ export const AdminDashboard: React.FC = () => {
 							<Grid item xs={12} sm={6} md={4} lg={2} key={stat.label}>
 								<Card
 									sx={{
-										borderRadius: 3,
-										border: "1px solid",
-										borderColor: "divider",
-										transition: "transform 0.2s, box-shadow 0.2s",
+										...luxeSurface,
+										height: "100%",
+										transition: "transform 0.25s ease, box-shadow 0.3s ease",
 										"&:hover": {
-											transform: "translateY(-2px)",
-											boxShadow: 3,
+											transform: "translateY(-3px)",
 										},
 									}}
 								>

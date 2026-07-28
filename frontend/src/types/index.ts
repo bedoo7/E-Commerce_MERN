@@ -64,6 +64,9 @@ export interface IOrder {
 	couponPercent?: number;
 	address: string;
 	status: OrderStatus;
+	cancelledAt?: string;
+	cancelledBy?: string;
+	cancelReason?: string;
 	createdAt?: string;
 	updatedAt?: string;
 }

@@ -6,8 +6,10 @@ import {
 	MenuItem,
 	Select,
 	SelectChangeEvent,
+	Paper,
 } from "@mui/material";
 import { IPagination } from "../../types";
+import { luxeGlassPanel } from "../../theme/luxeStyles";
 
 interface PaginationComponentProps {
 	pagination: IPagination;
@@ -41,16 +43,18 @@ export const PaginationComponent: React.FC<PaginationComponentProps> = ({
 	if (totalItems === 0) return null;
 
 	return (
-		<Box
-			display="flex"
-			flexDirection={{ xs: "column", sm: "row" }}
-			justifyContent="space-between"
-			alignItems="center"
-			gap={2}
-			mt={4}
-			pt={3}
-			borderTop="1px solid"
-			borderColor="divider"
+		<Paper
+			elevation={0}
+			sx={{
+				...luxeGlassPanel,
+				display: "flex",
+				flexDirection: { xs: "column", sm: "row" },
+				justifyContent: "space-between",
+				alignItems: "center",
+				gap: 2,
+				mt: 4,
+				p: { xs: 2, sm: 2.5 },
+			}}
 		>
 			<Typography variant="body2" color="text.secondary" fontWeight={500}>
 				Showing{" "}
@@ -82,17 +86,18 @@ export const PaginationComponent: React.FC<PaginationComponentProps> = ({
 							color="text.secondary"
 							fontWeight={600}
 						>
-							Per page:
+							Per page
 						</Typography>
 						<Select
 							value={limit}
 							onChange={handleLimitChange}
 							size="small"
 							sx={{
-								height: 36,
+								height: 40,
+								minWidth: 72,
 								fontSize: "0.875rem",
-								borderRadius: 2,
-								"& .MuiOutlinedInput-input": { py: 0.5, px: 1.5 },
+								borderRadius: 2.5,
+								"& .MuiOutlinedInput-input": { py: 0.75, px: 1.5 },
 							}}
 						>
 							<MenuItem value={6}>6</MenuItem>
@@ -114,6 +119,6 @@ export const PaginationComponent: React.FC<PaginationComponentProps> = ({
 					showLastButton
 				/>
 			</Box>
-		</Box>
+		</Paper>
 	);
 };

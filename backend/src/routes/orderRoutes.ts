@@ -2,6 +2,7 @@ import express, { Response } from "express";
 import { authenticate } from "../middleware/auth.middleware";
 import { authorize } from "../middleware/authorize.middleware";
 import {
+	cancelOrder,
 	getAllOrders,
 	getOrderById,
 	getUserOrders,
@@ -57,5 +58,25 @@ router.put(
 		}
 	},
 );
+
+// Cancel own order (user)
+router.post("/:id/cancel", authenticate, async (req: any, res: Response) => {
+	try {
+		const { cancelReason } = req.body;
+		if (!cancelReason || !cancelReason.trim()) {
+			return res
+				.status(400)
+				.json({ message: "Cancellation reason is required" });
+		}
+		const order = await cancelOrder(
+			req.params.id,
+			req.user.id,
+			cancelReason.trim(),
+		);
+		res.status(200).json(order);
+	} catch (error: any) {
+		res.status(400).json({ message: error.message });
+	}
+});
 
 export default router;

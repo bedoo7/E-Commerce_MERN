@@ -7,6 +7,7 @@ import {
 	DialogActions,
 	Button,
 	CircularProgress,
+	Box,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
@@ -33,15 +34,38 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 }) => {
 	return (
 		<Dialog open={open} onClose={onCancel} maxWidth="xs" fullWidth>
-			<DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-				<WarningAmberIcon color="warning" />
-				{title}
+			<DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1.5, pb: 1 }}>
+				<Box
+					sx={{
+						width: 40,
+						height: 40,
+						borderRadius: 2,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						bgcolor: "warning.main",
+						color: "warning.contrastText",
+						opacity: 0.95,
+					}}
+				>
+					<WarningAmberIcon fontSize="small" />
+				</Box>
+				<Box component="span" fontWeight={800} letterSpacing="-0.02em">
+					{title}
+				</Box>
 			</DialogTitle>
 			<DialogContent>
-				<DialogContentText>{message}</DialogContentText>
+				<DialogContentText sx={{ lineHeight: 1.65, color: "text.secondary" }}>
+					{message}
+				</DialogContentText>
 			</DialogContent>
-			<DialogActions sx={{ p: 2, pt: 0 }}>
-				<Button onClick={onCancel} color="inherit" disabled={isLoading}>
+			<DialogActions sx={{ p: 2.5, pt: 1, gap: 1 }}>
+				<Button
+					onClick={onCancel}
+					color="inherit"
+					disabled={isLoading}
+					sx={{ borderRadius: 2.5, px: 2.5 }}
+				>
 					{cancelText}
 				</Button>
 				<Button
@@ -49,6 +73,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 					variant="contained"
 					color="error"
 					disabled={isLoading}
+					sx={{ borderRadius: 2.5, px: 2.5 }}
 					startIcon={
 						isLoading ? <CircularProgress size={16} color="inherit" /> : null
 					}

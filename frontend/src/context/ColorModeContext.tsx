@@ -15,7 +15,7 @@ export const ColorModeProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
 	const [mode, setMode] = useState<"light" | "dark">(() => {
 		const savedMode = localStorage.getItem("themeMode");
-		return (savedMode as "light" | "dark") || "light";
+		return (savedMode as "light" | "dark") || "dark";
 	});
 
 	useEffect(() => {
@@ -43,8 +43,8 @@ export const ColorModeProvider: React.FC<{ children: React.ReactNode }> = ({
 						dark: "#be185d",
 					},
 					background: {
-						default: mode === "light" ? "#f8fafc" : "#0f172a",
-						paper: mode === "light" ? "#ffffff" : "#1e293b",
+						default: mode === "light" ? "#f8fafc" : "#0b1020",
+						paper: mode === "light" ? "#ffffff" : "#151c2f",
 					},
 					text: {
 						primary: mode === "light" ? "#0f172a" : "#f8fafc",
@@ -127,6 +127,71 @@ export const ColorModeProvider: React.FC<{ children: React.ReactNode }> = ({
 							root: {
 								fontWeight: 600,
 								borderRadius: 8,
+							},
+						},
+					},
+					MuiDialog: {
+						styleOverrides: {
+							paper: {
+								borderRadius: 16,
+								border:
+									mode === "dark"
+										? "1px solid rgba(129, 140, 248, 0.15)"
+										: "1px solid rgba(226, 232, 240, 0.9)",
+								backgroundImage: "none",
+								boxShadow:
+									mode === "dark"
+										? "0 32px 64px -16px rgba(0, 0, 0, 0.65)"
+										: "0 32px 64px -16px rgba(15, 23, 42, 0.15)",
+							},
+						},
+					},
+					MuiTableContainer: {
+						styleOverrides: {
+							root: {
+								borderRadius: 16,
+								backgroundImage: "none",
+							},
+						},
+					},
+					MuiPaginationItem: {
+						styleOverrides: {
+							root: {
+								borderRadius: 10,
+								fontWeight: 600,
+							},
+						},
+					},
+					MuiOutlinedInput: {
+						styleOverrides: {
+							root: {
+								transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+								"&.Mui-focused": {
+									boxShadow:
+										mode === "dark"
+											? "0 0 0 3px rgba(129, 140, 248, 0.2)"
+											: "0 0 0 3px rgba(79, 70, 229, 0.12)",
+								},
+							},
+						},
+					},
+					MuiMenu: {
+						styleOverrides: {
+							paper: {
+								borderRadius: 14,
+								border:
+									mode === "dark"
+										? "1px solid rgba(129, 140, 248, 0.12)"
+										: "1px solid rgba(226, 232, 240, 0.9)",
+								backgroundImage: "none",
+								marginTop: 8,
+							},
+						},
+					},
+					MuiSkeleton: {
+						styleOverrides: {
+							root: {
+								borderRadius: 12,
 							},
 						},
 					},

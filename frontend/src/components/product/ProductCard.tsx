@@ -10,6 +10,7 @@ import {
 	Chip,
 	Stack,
 	IconButton,
+	Rating,
 } from "@mui/material";
 import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import RemoveIcon from "@mui/icons-material/Remove";
@@ -18,6 +19,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import HighlightOffIcon from "@mui/icons-material/HighlightOff";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { IProduct } from "../../types";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -33,6 +35,8 @@ interface ProductCardProps {
 	isAddToCartPending: boolean;
 	isUpdatePending?: boolean;
 	inWishlist?: boolean;
+	/** Optional display rating (e.g. from review aggregates) */
+	averageRating?: number;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -44,6 +48,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 	isAddToCartPending,
 	isUpdatePending,
 	inWishlist,
+	averageRating,
 }) => {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
@@ -107,15 +112,33 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 				borderRadius: 4,
 				overflow: "hidden",
 				cursor: "pointer",
-				transition: "transform 0.3s ease, box-shadow 0.3s ease",
+				border: "1px solid",
+				borderColor: (t) =>
+					t.palette.mode === "dark"
+						? "rgba(129, 140, 248, 0.12)"
+						: "rgba(226, 232, 240, 0.95)",
+				boxShadow: (t) =>
+					t.palette.mode === "dark"
+						? "0 12px 40px -16px rgba(0, 0, 0, 0.45)"
+						: "0 8px 30px -12px rgba(15, 23, 42, 0.08)",
+				transition:
+					"transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease, border-color 0.35s ease",
 				"&:hover": {
-					transform: "translateY(-6px)",
-					boxShadow: (theme) =>
-						theme.palette.mode === "light"
-							? "0 12px 30px -4px rgba(15, 23, 42, 0.12)"
-							: "0 12px 30px -4px rgba(0, 0, 0, 0.5)",
+					transform: "translateY(-8px)",
+					borderColor: (t) =>
+						t.palette.mode === "dark"
+							? "rgba(129, 140, 248, 0.28)"
+							: "rgba(79, 70, 229, 0.2)",
+					boxShadow: (t) =>
+						t.palette.mode === "dark"
+							? "0 24px 48px -16px rgba(79, 70, 229, 0.35)"
+							: "0 20px 40px -12px rgba(79, 70, 229, 0.18)",
 					"& .MuiCardMedia-root": {
-						transform: "scale(1.05)",
+						transform: "scale(1.06)",
+					},
+					"& .product-card-quick-actions": {
+						opacity: 1,
+						transform: "translateY(0)",
 					},
 				},
 			}}
@@ -123,10 +146,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 			<Box
 				sx={{
 					position: "relative",
-					pt: "75%",
+					pt: "78%",
 					overflow: "hidden",
 					bgcolor: (theme) =>
-						theme.palette.mode === "light" ? "#f8fafc" : "#0f172a",
+						theme.palette.mode === "light" ? "#f1f5f9" : "#0f172a",
+					"&::after": {
+						content: '""',
+						position: "absolute",
+						inset: 0,
+						background:
+							"linear-gradient(180deg, transparent 55%, rgba(15, 23, 42, 0.35) 100%)",
+						pointerEvents: "none",
+						opacity: 0.6,
+					},
 				}}
 			>
 				<CardMedia
@@ -140,50 +172,73 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 						width: "100%",
 						height: "100%",
 						objectFit: "cover",
-						transition: "transform 0.5s ease",
+						transition: "transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)",
 					}}
 					onError={(e: any) => {
 						e.target.src =
 							"https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80";
 					}}
 				/>
-				<Box
+				<Stack
+					direction="row"
+					spacing={0.75}
 					sx={{
 						position: "absolute",
-						top: 16,
-						left: 20,
-						display: "flex",
-						gap: 0.8,
+						top: 14,
+						left: 14,
+						zIndex: 1,
 					}}
 				>
 					<Chip
 						label={product.brand}
 						size="small"
 						sx={{
-							bgcolor: "rgba(15, 23, 42, 0.75)",
+							bgcolor: "rgba(15, 23, 42, 0.72)",
 							color: "#fff",
-							backdropFilter: "blur(6px)",
-							fontWeight: 600,
-							fontSize: "0.7rem",
+							backdropFilter: "blur(10px)",
+							fontWeight: 700,
+							fontSize: "0.68rem",
+							border: "1px solid rgba(255,255,255,0.12)",
 						}}
 					/>
-				</Box>
+					{inStock && product.stock <= 5 && (
+						<Chip
+							icon={<AutoAwesomeIcon sx={{ fontSize: "14px !important" }} />}
+							label="Low stock"
+							size="small"
+							sx={{
+								bgcolor: "rgba(245, 158, 11, 0.9)",
+								color: "#fff",
+								fontWeight: 700,
+								fontSize: "0.65rem",
+								"& .MuiChip-icon": { color: "#fff" },
+							}}
+						/>
+					)}
+				</Stack>
 				<IconButton
+					className="product-card-quick-actions"
 					onClick={handleWishlistClick}
 					sx={{
 						position: "absolute",
-						top: 16,
-						right: 20,
-						bgcolor: "rgba(255,255,255,0.85)",
-						backdropFilter: "blur(4px)",
+						top: 12,
+						right: 12,
+						zIndex: 1,
+						bgcolor: "rgba(255,255,255,0.92)",
+						backdropFilter: "blur(8px)",
+						boxShadow: "0 8px 20px -8px rgba(0,0,0,0.35)",
+						opacity: { xs: 1, md: 0.95 },
+						transition: "all 0.25s ease",
 						"&:hover": {
 							bgcolor: "#fff",
-							transform: "scale(1.1)",
+							transform: "scale(1.08)",
 						},
-						transition: "all 0.2s ease",
 					}}
 					size="small"
 					disabled={toggleWishlistMutation.isPending}
+					aria-label={
+						inWishlist ? "Remove from wishlist" : "Add to wishlist"
+					}
 				>
 					{inWishlist ? (
 						<FavoriteIcon sx={{ color: "#ef4444", fontSize: 20 }} />
@@ -193,7 +248,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 				</IconButton>
 			</Box>
 
-			<CardContent sx={{ flexGrow: 1, p: 2.5 }}>
+			<CardContent sx={{ flexGrow: 1, p: 2.5, pt: 2 }}>
 				<Box
 					sx={{
 						display: "flex",
@@ -206,7 +261,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 						variant="caption"
 						color="primary"
 						fontWeight={700}
-						sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}
+						sx={{ textTransform: "uppercase", letterSpacing: "0.08em" }}
 					>
 						{product.category}
 					</Typography>
@@ -230,16 +285,33 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 					variant="h6"
 					fontWeight={700}
 					sx={{
-						mb: 1,
+						mb: 0.75,
 						display: "-webkit-box",
 						WebkitLineClamp: 1,
 						WebkitBoxOrient: "vertical",
 						overflow: "hidden",
+						letterSpacing: "-0.02em",
+						fontSize: "1.05rem",
 					}}
 					title={product.name}
 				>
 					{product.name}
 				</Typography>
+
+				{averageRating !== undefined && averageRating > 0 && (
+					<Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 1 }}>
+						<Rating
+							value={averageRating}
+							precision={0.1}
+						 readOnly
+						 size="small"
+						 sx={{ fontSize: "1rem" }}
+						/>
+						<Typography variant="caption" color="text.secondary" fontWeight={600}>
+							{averageRating.toFixed(1)}
+						</Typography>
+					</Stack>
+				)}
 
 				<Typography
 					variant="body2"
@@ -251,13 +323,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 						WebkitBoxOrient: "vertical",
 						overflow: "hidden",
 						minHeight: 40,
-						fontSize: "0.85rem",
+						fontSize: "0.8125rem",
+						lineHeight: 1.55,
 					}}
 				>
 					{product.description}
 				</Typography>
 
-				<Typography variant="h5" color="text.primary" fontWeight={800}>
+				<Typography
+					variant="h5"
+					color="text.primary"
+					fontWeight={800}
+					sx={{ letterSpacing: "-0.03em" }}
+				>
 					${product.price.toLocaleString()}
 				</Typography>
 			</CardContent>
@@ -268,23 +346,31 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 						direction="row"
 						alignItems="center"
 						justifyContent="space-between"
-						sx={{ width: "100%" }}
+						sx={{
+							width: "100%",
+							p: 0.5,
+							borderRadius: 2.5,
+							border: "1px solid",
+							borderColor: "divider",
+							bgcolor: (t) =>
+								t.palette.mode === "dark"
+									? "rgba(129, 140, 248, 0.06)"
+									: "rgba(79, 70, 229, 0.04)",
+						}}
 					>
 						<IconButton
 							size="small"
 							onClick={handleDecrease}
 							disabled={isUpdatePending}
 							sx={{
-								border: "1px solid",
-								borderColor: "divider",
-								borderRadius: 1.5,
-								width: 36,
-								height: 36,
+								borderRadius: 2,
+								width: 38,
+								height: 38,
 							}}
 						>
 							<RemoveIcon fontSize="small" />
 						</IconButton>
-						<Typography fontWeight={700} fontSize="1rem">
+						<Typography fontWeight={800} fontSize="1rem">
 							{cartQuantity}
 						</Typography>
 						<IconButton
@@ -292,11 +378,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 							onClick={handleIncrease}
 							disabled={isUpdatePending || cartQuantity >= product.stock}
 							sx={{
-								border: "1px solid",
-								borderColor: "divider",
-								borderRadius: 1.5,
-								width: 36,
-								height: 36,
+								borderRadius: 2,
+								width: 38,
+								height: 38,
 							}}
 						>
 							<AddIcon fontSize="small" />
@@ -310,7 +394,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 						startIcon={<AddShoppingCartIcon />}
 						disabled={!inStock || isAddToCartPending}
 						onClick={handleAddToCartClick}
-						sx={{ py: 1, borderRadius: 2.5, fontWeight: 700 }}
+						sx={{
+							py: 1.15,
+							borderRadius: 2.5,
+							fontWeight: 700,
+							background: inStock
+								? "linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)"
+								: undefined,
+						}}
 					>
 						{inStock ? "Add to Cart" : "Out of Stock"}
 					</Button>

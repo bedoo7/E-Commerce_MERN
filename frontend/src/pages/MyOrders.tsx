@@ -21,6 +21,7 @@ import { api } from "../api/axios";
 import { IOrder, IPaginatedResponse, OrderStatus } from "../types";
 import { PaginationComponent } from "../components/common/PaginationComponent";
 import { EmptyState } from "../components/common/EmptyState";
+import { luxeTableContainer } from "../theme/luxeStyles";
 
 const statusColors: Record<
 	OrderStatus,
@@ -117,7 +118,7 @@ export const MyOrders: React.FC = () => {
 				<>
 					<TableContainer
 						component={Paper}
-						sx={{ borderRadius: 3, overflow: "hidden" }}
+						sx={{ ...luxeTableContainer, maxHeight: "none" }}
 					>
 						<Table>
 							<TableHead sx={{ bgcolor: "action.hover" }}>

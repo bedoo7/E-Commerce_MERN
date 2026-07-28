@@ -32,6 +32,9 @@ export interface IOrder extends Document {
 	couponPercent?: number;
 	address: string;
 	status: OrderStatus;
+	cancelledAt?: Date;
+	cancelledBy?: ObjectId | string;
+	cancelReason?: string;
 	createdAt?: Date;
 	updatedAt?: Date;
 }
@@ -52,6 +55,13 @@ const orderSchema = new Schema<IOrder>(
 			enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
 			default: "pending",
 		},
+		cancelledAt: { type: Date, default: undefined },
+		cancelledBy: {
+			type: Schema.Types.ObjectId,
+			ref: "User",
+			default: undefined,
+		},
+		cancelReason: { type: String, default: undefined },
 	},
 	{
 		timestamps: true,

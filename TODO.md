@@ -1,37 +1,53 @@
-# Implementation Tasks
+# UI/UX Improvement TODO
 
-## Issue 1: Remove maxDiscountAmount (Dead Code)
+## Priority 1: Admin Dashboard
 
-- [ ] Remove `maxDiscountAmount` from `backend/src/models/couponModel.ts`
-- [ ] Remove `maxDiscountAmount` check from `backend/src/services/cartService.ts`
-- [ ] Remove `maxDiscountAmount` from `frontend/src/types/index.ts` (ICoupon)
+- [x] Apply `luxeSurface` to analytics cards with better hover
+- [x] Imported luxe utilities for tables and dialogs
+- [x] Consistent spacing and typography
 
-## Issue 2: Production Order Number
+## Priority 2: ProductDetail
 
-- [ ] Add `orderNumber` field to `backend/src/models/orderModel.ts`
-- [ ] Generate orderNumber in checkout (`backend/src/services/cartService.ts`) using counter pattern
-- [ ] Add auto-migration script for existing orders without orderNumber
-- [ ] Update `frontend/src/pages/Cart.tsx` to display `order.orderNumber`
-- [ ] Update `frontend/src/pages/OrderDetail.tsx` to display `order.orderNumber`
-- [ ] Update `frontend/src/pages/MyOrders.tsx` to display `order.orderNumber`
-- [ ] Update `frontend/src/pages/AdminDashboard.tsx` to display `order.orderNumber`
+- [x] Added `luxeSurface` import for review summary card
+- [x] Review Summary Paper uses `luxeSurface`
 
-## Issue 3: Coupon Usage Per User
+## Priority 3: Cart & Checkout
 
-- [ ] Add `usedBy` array to `backend/src/models/couponModel.ts`
-- [ ] Update `backend/src/services/couponService.ts` validateCoupon to check per-user limit
-- [ ] Update `backend/src/services/cartService.ts` checkout to increment per-user usage after order created
+- [x] Added luxe style imports (luxeSurface, luxeStickySummary, luxeDialogPaper)
+- [x] Cart item cards use `luxeSurface`
+- [x] Order summary uses `luxeStickySummary`
+- [x] Checkout dialog uses `luxeDialogPaper`
 
-## Issue 4: Cart UX - Hide Discount -0
+## Priority 4: MyOrders
 
-- [ ] In `frontend/src/pages/Cart.tsx`, wrap Order Summary Discount row with `{discountAmount > 0 && (...)}`
+- [x] Applied `luxeTableContainer` to orders table
 
-## Issue 5: Verification
+## Priority 5: OrderDetail
 
-- [ ] TypeScript compilation check (backend + frontend)
-- [ ] Verify coupon validation flow
-- [ ] Verify checkout (with and without coupon)
-- [ ] Verify order success screen
-- [ ] Verify order details
-- [ ] Verify my orders list
-- [ ] Verify admin orders
+- [x] Applied `luxeTableContainer` for items table
+- [x] Imported `luxeSurface` for summary card
+
+## Priority 6: Navbar & Footer
+
+- [x] Already premium - uses `luxeNavLinkActive`, `luxeIconButton`, `luxeFadeIn`
+
+## Priority 7: Wishlist
+
+- [x] Already premium - card styling matches ProductCard
+
+## Priority 8: Login / Register
+
+- [x] Gradient bar removed - clean premium card surface
+- [x] Enhanced icon glow matching Hero section (dark mode: `0 0 60px -12px rgba(129, 140, 248, 0.25)`)
+- [x] Uses `luxeAuthCard` — elevated shadow + subtle border
+
+## Priority 9: ForgotPassword / ResetPassword
+
+- [x] Unified with `luxeAuthCard` and same icon glow treatment
+- [x] Success state (green icon) also gets matching glow
+- [x] Design language now cohesive across all 4 auth pages
+
+## Priority 10: Design System (`luxeStyles.ts`)
+
+- [x] `luxeAuthCard` refactored — removed `luxeSurface` extension & gradient `::before`
+- [x] Now uses direct border/shadow/background definition for clean floating surface

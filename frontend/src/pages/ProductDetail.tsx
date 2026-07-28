@@ -24,6 +24,7 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import AddIcon from "@mui/icons-material/Add";
 import { api } from "../api/axios";
 import { IProduct, IReviewResponse } from "../types";
+import { luxeSurface } from "../theme/luxeStyles";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 
@@ -393,16 +394,7 @@ export const ProductDetail: React.FC = () => {
 					<Box sx={{ p: 3 }}>
 						<Grid container spacing={3}>
 							<Grid item xs={12} md={4}>
-								<Paper
-									elevation={0}
-									sx={{
-										p: 2,
-										borderRadius: 3,
-										border: "1px solid",
-										borderColor: "divider",
-										bgcolor: "background.default",
-									}}
-								>
+								<Paper elevation={0} sx={luxeSurface}>
 									<Typography variant="subtitle2" color="text.secondary" mb={1}>
 										Review Summary
 									</Typography>

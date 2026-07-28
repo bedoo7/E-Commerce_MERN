@@ -139,3 +139,52 @@ export const updateOrderStatus = async (orderId: string, status: string) => {
 		throw new Error(error.message);
 	}
 };
+
+export const cancelOrder = async (
+	orderId: string,
+	userId: string,
+	cancelReason: string,
+) => {
+	try {
+		const order = await orderModel.findById(orderId);
+		if (!order) {
+			throw new Error("Order not found");
+		}
+
+		if (order.userId.toString() !== userId) {
+			throw new Error("You can only cancel your own orders");
+		}
+
+		if (order.status !== "pending") {
+			throw new Error(
+				`Cannot cancel order with status "${order.status}". Only pending orders can be cancelled.`,
+			);
+		}
+
+		if (order.status === "cancelled") {
+			throw new Error("Order is already cancelled");
+		}
+
+		const updatedOrder = await orderModel
+			.findByIdAndUpdate(
+				orderId,
+				{
+					status: "cancelled",
+					cancelledAt: new Date(),
+					cancelledBy: userId,
+					cancelReason,
+				},
+				{ new: true },
+			)
+			.populate("userId", "firstName lastName email")
+			.lean();
+
+		if (!updatedOrder) {
+			throw new Error("Failed to cancel order");
+		}
+
+		return updatedOrder;
+	} catch (error: any) {
+		throw new Error(error.message);
+	}
+};

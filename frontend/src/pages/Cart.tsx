@@ -26,6 +26,11 @@ import ShoppingBag from "@mui/icons-material/ShoppingBag";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { api } from "../api/axios";
 import { ICart, IProduct, IOrder } from "../types";
+import {
+	luxeSurface,
+	luxeStickySummary,
+	luxeDialogPaper,
+} from "../theme/luxeStyles";
 import toast from "react-hot-toast";
 
 type CouponValidationResponse = {
@@ -357,16 +362,7 @@ export const Cart: React.FC = () => {
 									<Card
 										key={product._id}
 										sx={{
-											borderRadius: 3,
-											border: "1px solid",
-											borderColor: "divider",
-											transition: "all 0.2s ease",
-											"&:hover": {
-												boxShadow: (theme) =>
-													theme.palette.mode === "light"
-														? "0 4px 20px rgba(0,0,0,0.08)"
-														: "0 4px 20px rgba(0,0,0,0.3)",
-											},
+											...luxeSurface,
 										}}
 									>
 										<CardContent
@@ -518,11 +514,7 @@ export const Cart: React.FC = () => {
 					<Grid item xs={12} md={4}>
 						<Card
 							sx={{
-								borderRadius: 3,
-								border: "1px solid",
-								borderColor: "divider",
-								position: "sticky",
-								top: 100,
+								...luxeStickySummary,
 							}}
 						>
 							<CardContent sx={{ p: 3 }}>
@@ -654,6 +646,7 @@ export const Cart: React.FC = () => {
 				onClose={() => setCheckoutOpen(false)}
 				fullWidth
 				maxWidth="sm"
+				PaperProps={{ sx: luxeDialogPaper }}
 			>
 				<DialogTitle>Complete Your Checkout</DialogTitle>
 				<DialogContent>

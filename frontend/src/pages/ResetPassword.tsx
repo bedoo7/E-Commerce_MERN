@@ -22,6 +22,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { api } from "../api/axios";
 import toast from "react-hot-toast";
+import { luxeAuthCard } from "../theme/luxeStyles";
 
 export const ResetPassword: React.FC = () => {
 	const [searchParams] = useSearchParams();
@@ -121,15 +122,7 @@ export const ResetPassword: React.FC = () => {
 					}}
 				>
 					<Fade in timeout={500}>
-						<Card
-							sx={{
-								width: "100%",
-								p: 2,
-								borderRadius: 4,
-								overflow: "visible",
-								position: "relative",
-							}}
-						>
+						<Card sx={{ ...luxeAuthCard, p: 2 }}>
 							<Box
 								sx={{
 									position: "absolute",
@@ -144,7 +137,10 @@ export const ResetPassword: React.FC = () => {
 									display: "flex",
 									alignItems: "center",
 									justifyContent: "center",
-									boxShadow: "0 8px 24px rgba(16, 185, 129, 0.3)",
+									boxShadow: (t) =>
+										t.palette.mode === "dark"
+											? "0 0 0 1px rgba(16, 185, 129, 0.2), 0 12px 32px -8px rgba(16, 185, 129, 0.55), 0 0 60px -12px rgba(16, 185, 129, 0.25)"
+											: "0 12px 32px -8px rgba(16, 185, 129, 0.55)",
 									zIndex: 1,
 								}}
 							>
@@ -197,16 +193,8 @@ export const ResetPassword: React.FC = () => {
 				}}
 			>
 				<Fade in timeout={500}>
-					<Card
-						sx={{
-							width: "100%",
-							p: 2,
-							borderRadius: 4,
-							overflow: "visible",
-							position: "relative",
-						}}
-					>
-						{/* Decorative gradient top */}
+					<Card sx={{ ...luxeAuthCard, p: 2 }}>
+						{/* Floating brand icon with soft purple glow */}
 						<Box
 							sx={{
 								position: "absolute",
@@ -220,7 +208,10 @@ export const ResetPassword: React.FC = () => {
 								display: "flex",
 								alignItems: "center",
 								justifyContent: "center",
-								boxShadow: "0 8px 24px rgba(79, 70, 229, 0.3)",
+								boxShadow: (t) =>
+									t.palette.mode === "dark"
+										? "0 0 0 1px rgba(129, 140, 248, 0.15), 0 12px 32px -8px rgba(79, 70, 229, 0.55), 0 0 60px -12px rgba(129, 140, 248, 0.25)"
+										: "0 12px 32px -8px rgba(79, 70, 229, 0.55)",
 								zIndex: 1,
 							}}
 						>
