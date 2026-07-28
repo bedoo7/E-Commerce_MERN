@@ -7,6 +7,7 @@ import {
 	updateUser,
 	deleteUser,
 	toggleUserActive,
+	verifyEmail,
 } from "../services/userServices";
 import { authenticate } from "../middleware/auth.middleware";
 import { authorize } from "../middleware/authorize.middleware";
@@ -14,17 +15,38 @@ import { authorize } from "../middleware/authorize.middleware";
 const router = express.Router();
 
 router.post("/register", async (req, res) => {
-	const { firstName, lastName, email, password, role } = req.body;
-	try {
-		const user = await registerUser({
-			firstName,
-			lastName,
-			email,
-			password,
-			role,
-		});
+	const { firstName, lastName, email, password, confirmPassword, role } = req.body;
+		try {
+			const user = await registerUser({
+				firstName,
+				lastName,
+				email,
+				password,
+				confirmPassword,
+				role,
+			});
 
 		res.status(201).json(user);
+	} catch (error: any) {
+		res.status(400).json({ message: error.message });
+	}
+});
+
+router.post("/login", async (req, res) => {
+	const { email, password } = req.body;
+	try {
+		const user = await loginUser({ email, password });
+		res.status(200).json(user);
+	} catch (error: any) {
+		res.status(400).json({ message: error.message });
+	}
+});
+
+router.post("/verify-email", async (req, res) => {
+	const { token } = req.body;
+	try {
+		const result = await verifyEmail(token);
+		res.status(200).json(result);
 	} catch (error: any) {
 		res.status(400).json({ message: error.message });
 	}

@@ -1,11 +1,13 @@
 import { userModel, IUser } from "../models/userModel";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import {
 	buildPaginatedResponse,
 	parsePaginationParams,
 	PaginatedResponse,
 } from "../utils/pagination";
+import { sendVerificationEmail } from "../utils/emailService";
 
 export interface UserQueryParams {
 	page?: string | number;
@@ -24,14 +26,35 @@ interface RegisterParams {
 	lastName: string;
 	email: string;
 	password: string;
+	confirmPassword: string;
 	role?: "user" | "admin";
 }
+
+const validatePasswordStrength = (password: string): string | null => {
+	if (password.length < 8) {
+		return "Password must be at least 8 characters";
+	}
+	if (!/[a-z]/.test(password)) {
+		return "Password must contain at least one lowercase letter";
+	}
+	if (!/[A-Z]/.test(password)) {
+		return "Password must contain at least one uppercase letter";
+	}
+	if (!/\d/.test(password)) {
+		return "Password must contain at least one number";
+	}
+	if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+		return "Password must contain at least one special character";
+	}
+	return null;
+};
 
 export const registerUser = async ({
 	firstName,
 	lastName,
 	email,
 	password,
+	confirmPassword,
 	role,
 }: RegisterParams) => {
 	try {
@@ -40,7 +63,18 @@ export const registerUser = async ({
 			throw new Error("User with this email already exists");
 		}
 
+		if (password !== confirmPassword) {
+			throw new Error("Passwords do not match");
+		}
+
+		const strengthError = validatePasswordStrength(password);
+		if (strengthError) {
+			throw new Error(strengthError);
+		}
+
 		const hashedPassword = await bcrypt.hash(password, 10);
+
+		const verificationToken = crypto.randomBytes(32).toString("hex");
 
 		const user = await userModel.create({
 			firstName,
@@ -48,9 +82,15 @@ export const registerUser = async ({
 			email,
 			password: hashedPassword,
 			role: role || "user",
+			isVerified: false,
+			verificationToken,
 		});
 
-		// نجيب اليوزر تاني من غير الباسورد
+		const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+		const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
+
+		await sendVerificationEmail(email, verificationUrl);
+
 		const userWithoutPassword = await userModel
 			.findById(user._id)
 			.select("-password");
@@ -81,6 +121,12 @@ export const loginUser = async ({ email, password }: LoginParams) => {
 			throw new Error("Invalid email or password");
 		}
 
+		if (!existingUser.isVerified) {
+			throw new Error(
+				"Please verify your email address before logging in",
+			);
+		}
+
 		const token = jwt.sign(
 			{ id: existingUser._id, role: existingUser.role },
 			process.env.JWT_SECRET || "",
@@ -91,9 +137,34 @@ export const loginUser = async ({ email, password }: LoginParams) => {
 			.findById(existingUser._id)
 			.select("-password");
 
-		// return existingUser;
-
 		return { message: "Login successful", user: userWithoutPassword, token };
+	} catch (error: any) {
+		throw new Error(error.message);
+	}
+};
+
+export const verifyEmail = async (token: string) => {
+	try {
+		if (!token) {
+			throw new Error("Verification token is required");
+		}
+
+		const user = await userModel.findOne({
+			verificationToken: token,
+		});
+
+		if (!user) {
+			throw new Error("Invalid or expired verification token");
+		}
+
+		user.isVerified = true;
+		user.verificationToken = undefined;
+		await user.save();
+
+		return {
+			message:
+				"Email verified successfully. You can now log in.",
+		};
 	} catch (error: any) {
 		throw new Error(error.message);
 	}

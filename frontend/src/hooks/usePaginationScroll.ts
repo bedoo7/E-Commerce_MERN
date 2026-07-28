@@ -1,12 +1,12 @@
 import { useRef, useCallback } from "react";
 
-export function usePaginationScroll() {
-	const containerRef = useRef<HTMLDivElement>(null);
+export function usePaginationScroll<T extends Element = HTMLDivElement>() {
+	const firstItemRef = useRef<T>(null);
 
-	const scrollToTop = useCallback(() => {
+	const scrollToFirstItem = useCallback(() => {
 		requestAnimationFrame(() => {
 			requestAnimationFrame(() => {
-				containerRef.current?.scrollIntoView({
+				firstItemRef.current?.scrollIntoView({
 					behavior: "smooth",
 					block: "start",
 				});
@@ -14,5 +14,5 @@ export function usePaginationScroll() {
 		});
 	}, []);
 
-	return { containerRef, scrollToTop };
+	return { firstItemRef, scrollToFirstItem };
 }

@@ -35,7 +35,6 @@ import { EmptyState } from "../components/common/EmptyState";
 import { useAuth } from "../context/AuthContext";
 import { useSearchParams, Link } from "react-router-dom";
 import { useDebounce } from "../hooks/useDebounce";
-import { usePaginationScroll } from "../hooks/usePaginationScroll";
 import {
 	luxeFilterPanel,
 	luxeGlassPanel,
@@ -81,7 +80,18 @@ export const Home: React.FC = () => {
 	const [limit, setLimit] = useState(12);
 	const [showFilters, setShowFilters] = useState(false);
 	const debouncedSearch = useDebounce(search, 400);
-	const { containerRef, scrollToTop } = usePaginationScroll();
+	const searchBarRef = React.useRef<HTMLDivElement>(null);
+
+	const scrollToSearchBar = React.useCallback(() => {
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				searchBarRef.current?.scrollIntoView({
+					behavior: "smooth",
+					block: "start",
+				});
+			});
+		});
+	}, []);
 
 	// Keep the local filter state in sync with footer navigation links
 	useEffect(() => {
@@ -263,8 +273,13 @@ export const Home: React.FC = () => {
 
 	const handlePageChange = (p: number) => {
 		setPage(p);
-		scrollToTop();
 	};
+
+	useEffect(() => {
+		if (productsData?.data && productsData.data.length > 0) {
+			scrollToSearchBar();
+		}
+	}, [page, productsData]);
 
 	const hasActiveFilters =
 		search ||
@@ -834,7 +849,7 @@ export const Home: React.FC = () => {
 			</Box>
 
 			{/* Search & Filter */}
-			<Box sx={{ mb: 4 }}>
+			<Box ref={searchBarRef} sx={{ mb: 4 }}>
 				<Paper
 					elevation={0}
 					sx={{
@@ -1035,7 +1050,14 @@ export const Home: React.FC = () => {
 				<>
 					<Grid container spacing={2.5}>
 						{products.map((product) => (
-							<Grid item xs={12} sm={6} md={4} lg={3} key={product._id}>
+							<Grid
+								item
+								xs={12}
+								sm={6}
+								md={4}
+								lg={3}
+								key={product._id}
+							>
 								<ProductCard
 									product={product}
 									onAddToCart={handleAddToCart}
@@ -1053,16 +1075,14 @@ export const Home: React.FC = () => {
 						))}
 					</Grid>
 					{pagination && (
-						<Box ref={containerRef}>
-							<PaginationComponent
-								pagination={pagination}
-								onPageChange={handlePageChange}
-								onLimitChange={(l) => {
-									setLimit(l);
-									setPage(1);
-								}}
-							/>
-						</Box>
+						<PaginationComponent
+							pagination={pagination}
+							onPageChange={handlePageChange}
+							onLimitChange={(l) => {
+								setLimit(l);
+								setPage(1);
+							}}
+						/>
 					)}
 				</>
 			) : (

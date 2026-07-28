@@ -22,7 +22,15 @@ function App() {
 				<AuthProvider>
 					<BrowserRouter>
 						<AppRoutes />
-						<Toaster position="top-right" />
+						<Toaster
+							position="top-right"
+							toastOptions={{
+								style: {
+									display: "flex",
+									alignItems: "flex-start",
+								},
+							}}
+						/>
 					</BrowserRouter>
 				</AuthProvider>
 			</ColorModeProvider>

@@ -51,7 +51,13 @@ export const Login: React.FC = () => {
 			login(response.data);
 			navigate("/");
 		} catch (err: any) {
-			toast.error(err.message || "Login failed");
+			if (err.message.includes("verify your email")) {
+				toast.error(
+					"Please verify your email address before logging in. Check your inbox for the verification link.",
+				);
+			} else {
+				toast.error(err.message || "Login failed");
+			}
 		} finally {
 			setIsSubmitting(false);
 		}

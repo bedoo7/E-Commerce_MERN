@@ -152,14 +152,6 @@ export const ForgotPassword: React.FC = () => {
 								</>
 							) : (
 								<Box textAlign="center" py={2}>
-									<MarkEmailReadIcon
-										sx={{
-											fontSize: 72,
-											color: "success.main",
-											mb: 2,
-											opacity: 0.9,
-										}}
-									/>
 									<Typography variant="h5" fontWeight={800} gutterBottom>
 										Check Your Email
 									</Typography>
@@ -175,7 +167,7 @@ export const ForgotPassword: React.FC = () => {
 									<Typography
 										variant="caption"
 										color="text.secondary"
-										sx={{ display: "block", mb: 3 }}
+										sx={{ display: "block", mb: 2 }}
 									>
 										The link expires in 15 minutes for security.
 									</Typography>

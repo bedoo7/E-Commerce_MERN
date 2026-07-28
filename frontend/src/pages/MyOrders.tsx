@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -39,12 +39,11 @@ const statusColors: Record<
 export const MyOrders: React.FC = () => {
 	const navigate = useNavigate();
 	const limit = 10;
-	const { containerRef, scrollToTop } = usePaginationScroll();
+	const { firstItemRef, scrollToFirstItem } = usePaginationScroll<HTMLTableRowElement>();
 	const [page, setPage] = useState(1);
 
 	const handlePageChange = (p: number) => {
 		setPage(p);
-		scrollToTop();
 	};
 
 	const { data, isLoading, error } = useQuery<IPaginatedResponse<IOrder>>({
@@ -56,6 +55,12 @@ export const MyOrders: React.FC = () => {
 			return res.data;
 		},
 	});
+
+	useEffect(() => {
+		if (data?.data && data.data.length > 0) {
+			scrollToFirstItem();
+		}
+	}, [page, data]);
 
 	if (isLoading) {
 		return (
@@ -125,7 +130,6 @@ export const MyOrders: React.FC = () => {
 			) : (
 				<>
 					<TableContainer
-						ref={containerRef}
 						component={Paper}
 						sx={{ ...luxeTableContainer, maxHeight: "none" }}
 					>
@@ -142,9 +146,13 @@ export const MyOrders: React.FC = () => {
 									<TableCell sx={{ fontWeight: 700 }}>Action</TableCell>
 								</TableRow>
 							</TableHead>
-							<TableBody>
-								{orders.map((order) => (
-									<TableRow key={order._id} hover>
+					<TableBody>
+						{orders.map((order, index) => (
+							<TableRow
+								key={order._id}
+								hover
+								ref={index === 0 ? firstItemRef : undefined}
+							>
 										<TableCell sx={{ pl: 3 }}>
 											<Typography
 												variant="body2"

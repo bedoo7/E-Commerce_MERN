@@ -15,39 +15,88 @@ import {
 	Stack,
 	Divider,
 	Fade,
+	InputAdornment,
+	IconButton,
+	Checkbox,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/axios";
 import toast from "react-hot-toast";
 import StorefrontIcon from "@mui/icons-material/Storefront";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { luxeAuthCard } from "../theme/luxeStyles";
 
-const registerSchema = z.object({
-	firstName: z.string().min(2, "First name must be at least 2 characters"),
-	lastName: z.string().min(2, "Last name must be at least 2 characters"),
-	email: z.string().email("Invalid email address"),
-	password: z.string().min(6, "Password must be at least 6 characters"),
-});
+const registerSchema = z
+	.object({
+		firstName: z.string().min(2, "First name must be at least 2 characters"),
+		lastName: z.string().min(2, "Last name must be at least 2 characters"),
+		email: z.string().email("Invalid email address"),
+		password: z
+			.string()
+			.min(8, "Password must be at least 8 characters")
+			.regex(
+				/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/,
+				"Password must contain uppercase, lowercase, number, and special character",
+			),
+		confirmPassword: z
+			.string()
+			.min(8, "Password must be at least 8 characters"),
+		terms: z.boolean().refine((val) => val === true, {
+			message: "You must agree to the Terms of Service and Privacy Policy",
+		}),
+	})
+	.refine((data) => data.password === data.confirmPassword, {
+		message: "Passwords do not match",
+		path: ["confirmPassword"],
+	});
 
 type RegisterFormInputs = z.infer<typeof registerSchema>;
 
 export const Register: React.FC = () => {
 	const navigate = useNavigate();
 	const [isSubmitting, setIsSubmitting] = React.useState(false);
+	const [showPassword, setShowPassword] = React.useState(false);
+	const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+	const [passwordStrength, setPasswordStrength] = React.useState<
+		"weak" | "medium" | "strong" | ""
+	>("");
 
 	const {
 		register,
 		handleSubmit,
+		watch,
 		formState: { errors },
 	} = useForm<RegisterFormInputs>({
 		resolver: zodResolver(registerSchema),
 	});
 
+	const watchedPassword = watch("password", "");
+
+	React.useEffect(() => {
+		const pwd = watchedPassword;
+		let score = 0;
+		if (pwd.length >= 8) score++;
+		if (/[a-z]/.test(pwd)) score++;
+		if (/[A-Z]/.test(pwd)) score++;
+		if (/\d/.test(pwd)) score++;
+		if (/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) score++;
+		if (score <= 2) setPasswordStrength("weak");
+		else if (score === 3) setPasswordStrength("medium");
+		else if (score >= 4) setPasswordStrength("strong");
+		else setPasswordStrength("");
+	}, [watchedPassword]);
+
 	const onSubmit = async (data: RegisterFormInputs) => {
 		setIsSubmitting(true);
 		try {
-			await api.post("/user/register", { ...data, role: "user" });
-			toast.success("Account created successfully! Please sign in.");
+			await api.post("/user/register", {
+				...data,
+				role: "user",
+			});
+			toast.success(
+				"Account created! Please check your email to verify your account.",
+			);
 			navigate("/login");
 		} catch (err: any) {
 			toast.error(err.message || "Registration failed");
@@ -68,7 +117,6 @@ export const Register: React.FC = () => {
 			>
 				<Fade in timeout={500}>
 					<Card sx={{ ...luxeAuthCard, p: 2 }}>
-						{/* Floating brand icon with soft purple glow */}
 						<Box
 							sx={{
 								position: "absolute",
@@ -142,11 +190,135 @@ export const Register: React.FC = () => {
 									<TextField
 										fullWidth
 										label="Password"
-										type="password"
+										type={showPassword ? "text" : "password"}
 										{...register("password")}
 										error={!!errors.password}
 										helperText={errors.password?.message}
+										InputProps={{
+											endAdornment: (
+												<InputAdornment position="end">
+													<IconButton
+														edge="end"
+														onClick={() => setShowPassword(!showPassword)}
+														tabIndex={-1}
+													>
+														{showPassword ? <VisibilityOff /> : <Visibility />}
+													</IconButton>
+												</InputAdornment>
+											),
+										}}
 									/>
+
+									{watchedPassword && (
+										<Box sx={{ mt: -1, mb: 1 }}>
+											<Stack direction="row" alignItems="center" spacing={1}>
+												<Box
+													sx={{
+														flex: 1,
+														height: 4,
+														borderRadius: 2,
+														backgroundColor:
+															passwordStrength === "weak"
+																? "#ef4444"
+																: passwordStrength === "medium"
+																	? "#f59e0b"
+																	: passwordStrength === "strong"
+																		? "#22c55e"
+																		: "#e2e8f0",
+													}}
+												/>
+												<Typography variant="caption" color="text.secondary">
+													{passwordStrength
+														? passwordStrength.charAt(0).toUpperCase() +
+															passwordStrength.slice(1)
+														: ""}
+												</Typography>
+											</Stack>
+										</Box>
+									)}
+
+									<TextField
+										fullWidth
+										label="Confirm Password"
+										type={showConfirmPassword ? "text" : "password"}
+										{...register("confirmPassword")}
+										error={!!errors.confirmPassword}
+										helperText={errors.confirmPassword?.message}
+										InputProps={{
+											endAdornment: (
+												<InputAdornment position="end">
+													<IconButton
+														edge="end"
+														onClick={() =>
+															setShowConfirmPassword(!showConfirmPassword)
+														}
+														tabIndex={-1}
+													>
+														{showConfirmPassword ? (
+															<VisibilityOff />
+														) : (
+															<Visibility />
+														)}
+													</IconButton>
+												</InputAdornment>
+											),
+										}}
+									/>
+
+									<Box
+										sx={{
+											display: "flex",
+											alignItems: "flex-start",
+											gap: 1.5,
+											mt: 1,
+											width: "100%",
+										}}
+									>
+										<Checkbox
+											{...register("terms")}
+											color="primary"
+											required
+											sx={{ flexShrink: 0, mt: 0.3, p: 0 }}
+										/>
+										<Typography
+											variant="body2"
+											color="text.secondary"
+											sx={{ lineHeight: 1.5 }}
+										>
+											I agree to the{" "}
+											<MuiLink
+												component={Link}
+												to="/terms"
+												fontWeight={600}
+												color="primary"
+											>
+												Terms of Service
+											</MuiLink>{" "}
+											and{" "}
+											<MuiLink
+												component={Link}
+												to="/privacy"
+												fontWeight={600}
+												color="primary"
+											>
+												Privacy Policy
+											</MuiLink>
+											<Typography
+												component="span"
+												color="error.main"
+												fontWeight={700}
+												sx={{ ml: 0.25 }}
+											>
+												*
+											</Typography>
+										</Typography>
+									</Box>
+
+									{errors.terms && (
+										<Typography variant="caption" color="error">
+											{errors.terms.message}
+										</Typography>
+									)}
 
 									<Button
 										type="submit"

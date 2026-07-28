@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
 	Box,
@@ -120,12 +120,31 @@ export const AdminDashboard: React.FC = () => {
 	const [userPage, setUserPage] = useState(1);
 	const [couponPage, setCouponPage] = useState(1);
 	const limit = 12;
-	const { containerRef: productRef, scrollToTop: scrollProducts } =
-		usePaginationScroll();
-	const { containerRef: orderRef, scrollToTop: scrollOrders } =
-		usePaginationScroll();
-	const { containerRef: userRef, scrollToTop: scrollUsers } =
-		usePaginationScroll();
+	const {
+		firstItemRef: productRef,
+		scrollToFirstItem: scrollProducts,
+	} = usePaginationScroll<HTMLTableRowElement>();
+	const {
+		firstItemRef: orderRef,
+		scrollToFirstItem: scrollOrders,
+	} = usePaginationScroll<HTMLTableRowElement>();
+	const {
+		firstItemRef: userRef,
+		scrollToFirstItem: scrollUsers,
+	} = usePaginationScroll<HTMLTableRowElement>();
+	const {
+		firstItemRef: couponRef,
+		scrollToFirstItem: scrollCoupons,
+	} = usePaginationScroll<HTMLTableRowElement>();
+
+
+
+
+
+
+
+
+
 
 	const [productSearch, setProductSearch] = useState("");
 	const debouncedProductSearch = useDebounce(productSearch, 300);
@@ -394,7 +413,32 @@ export const AdminDashboard: React.FC = () => {
 			);
 			return res.data;
 		},
-	});
+	});	// Scroll to first item when page changes and new data renders
+	useEffect(() => {
+		if (productsData?.data && productsData.data.length > 0) {
+			scrollProducts();
+		}
+	}, [productPage, productsData]);
+
+	useEffect(() => {
+		if (ordersData?.data && ordersData.data.length > 0) {
+			scrollOrders();
+		}
+	}, [orderPage, ordersData]);
+
+	useEffect(() => {
+		if (usersData?.users && usersData.users.length > 0) {
+			scrollUsers();
+		}
+	}, [userPage, usersData]);
+
+	useEffect(() => {
+		if (couponsData?.data && couponsData.data.length > 0) {
+			scrollCoupons();
+		}
+	}, [couponPage, couponsData]);
+
+
 
 	const coupons = couponsData?.data ?? [];
 	const couponsPagination = couponsData?.pagination;
@@ -2115,8 +2159,12 @@ export const AdminDashboard: React.FC = () => {
 											</TableRow>
 										</TableHead>
 										<TableBody>
-											{products.map((product) => (
-												<TableRow key={product._id} hover>
+											{products.map((product, index) => (
+												<TableRow
+													key={product._id}
+													hover
+													ref={index === 0 ? productRef : undefined}
+												>
 													<TableCell>
 														<Box
 															component="img"
@@ -2187,12 +2235,12 @@ export const AdminDashboard: React.FC = () => {
 									</Table>
 								</TableContainer>
 								{productsPagination && (
-									<Box ref={productRef} px={3} pb={2}>
+									<Box px={3} pb={2}>
 										<PaginationComponent
 											pagination={productsPagination}
 											onPageChange={(p) => {
 												setProductPage(p);
-												scrollProducts();
+												
 											}}
 										/>
 									</Box>
@@ -2319,10 +2367,14 @@ export const AdminDashboard: React.FC = () => {
 											</TableRow>
 										</TableHead>
 										<TableBody>
-											{orders.map((order) => {
+											{orders.map((order, index) => {
 												const user = order.userId as IUser;
 												return (
-													<TableRow key={order._id} hover>
+													<TableRow
+														key={order._id}
+														hover
+														ref={index === 0 ? orderRef : undefined}
+													>
 														<TableCell>
 															<Typography
 																variant="body2"
@@ -2389,12 +2441,12 @@ export const AdminDashboard: React.FC = () => {
 									</Table>
 								</TableContainer>
 								{ordersPagination && (
-									<Box ref={orderRef} mt={2} pb={2}>
+									<Box mt={2} pb={2}>
 										<PaginationComponent
 											pagination={ordersPagination}
 											onPageChange={(p) => {
 												setOrderPage(p);
-												scrollOrders();
+												
 											}}
 										/>
 									</Box>
@@ -2525,8 +2577,12 @@ export const AdminDashboard: React.FC = () => {
 											</TableRow>
 										</TableHead>
 										<TableBody>
-											{usersData?.users.map((user) => (
-												<TableRow key={user._id} hover>
+											{usersData?.users.map((user, index) => (
+												<TableRow
+													key={user._id}
+													hover
+													ref={index === 0 ? userRef : undefined}
+												>
 													<TableCell>
 														<Typography fontWeight={600}>
 															{user.firstName} {user.lastName}
@@ -2583,12 +2639,12 @@ export const AdminDashboard: React.FC = () => {
 									</Table>
 								</TableContainer>
 								{usersPagination && (
-									<Box ref={userRef} mt={2} pb={2}>
+									<Box mt={2} pb={2}>
 										<PaginationComponent
 											pagination={usersPagination}
 											onPageChange={(p) => {
 												setUserPage(p);
-												scrollUsers();
+												
 											}}
 										/>
 									</Box>
@@ -2746,8 +2802,12 @@ export const AdminDashboard: React.FC = () => {
 										</TableRow>
 									</TableHead>
 									<TableBody>
-										{coupons.map((coupon) => (
-											<TableRow key={coupon._id} hover>
+										{coupons.map((coupon, index) => (
+											<TableRow
+												key={coupon._id}
+												hover
+												ref={index === 0 ? couponRef : undefined}
+											>
 												<TableCell>
 													<Typography variant="subtitle2" fontWeight={700}>
 														{coupon.code}
@@ -2826,7 +2886,10 @@ export const AdminDashboard: React.FC = () => {
 							<Box px={3} pb={2}>
 								<PaginationComponent
 									pagination={couponsPagination}
-									onPageChange={setCouponPage}
+									onPageChange={(p) => {
+										setCouponPage(p);
+										
+									}}
 								/>
 							</Box>
 						)}

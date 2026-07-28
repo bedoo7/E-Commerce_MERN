@@ -14,6 +14,9 @@ import { ProductDetail } from "../pages/ProductDetail";
 import { MyOrders } from "../pages/MyOrders";
 import { OrderDetail } from "../pages/OrderDetail";
 import { Wishlist } from "../pages/Wishlist";
+import { VerifyEmail } from "../pages/VerifyEmail";
+import { Terms } from "../pages/Terms";
+import { Privacy } from "../pages/Privacy";
 
 export const AppRoutes: React.FC = () => {
 	return (
@@ -23,8 +26,11 @@ export const AppRoutes: React.FC = () => {
 				<Route path="/" element={<Home />} />
 				<Route path="/login" element={<Login />} />
 				<Route path="/register" element={<Register />} />
+				<Route path="/verify-email" element={<VerifyEmail />} />
 				<Route path="/forgot-password" element={<ForgotPassword />} />
 				<Route path="/reset-password" element={<ResetPassword />} />
+				<Route path="/terms" element={<Terms />} />
+				<Route path="/privacy" element={<Privacy />} />
 				<Route path="/product/:id" element={<ProductDetail />} />
 
 				{/* Protected User Routes */}
