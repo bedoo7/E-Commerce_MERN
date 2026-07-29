@@ -22,7 +22,6 @@ import { IOrder, IPaginatedResponse, OrderStatus } from "../types";
 import { PaginationComponent } from "../components/common/PaginationComponent";
 import { EmptyState } from "../components/common/EmptyState";
 import { luxeTableContainer } from "../theme/luxeStyles";
-import { usePaginationScroll } from "../hooks/usePaginationScroll";
 import { useState } from "react";
 
 const statusColors: Record<
@@ -39,8 +38,9 @@ const statusColors: Record<
 export const MyOrders: React.FC = () => {
 	const navigate = useNavigate();
 	const limit = 10;
-	const { firstItemRef, scrollToFirstItem } = usePaginationScroll<HTMLTableRowElement>();
+	const ordersContainerRef = React.useRef<HTMLDivElement>(null);
 	const [page, setPage] = useState(1);
+	const prevPage = React.useRef(1);
 
 	const handlePageChange = (p: number) => {
 		setPage(p);
@@ -56,9 +56,21 @@ export const MyOrders: React.FC = () => {
 		},
 	});
 
+	const scrollToOrders = React.useCallback(() => {
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				ordersContainerRef.current?.scrollIntoView({
+					behavior: "smooth",
+					block: "start",
+				});
+			});
+		});
+	}, []);
+
 	useEffect(() => {
-		if (data?.data && data.data.length > 0) {
-			scrollToFirstItem();
+		if (data?.data && data.data.length > 0 && page !== prevPage.current) {
+			scrollToOrders();
+			prevPage.current = page;
 		}
 	}, [page, data]);
 
@@ -131,6 +143,7 @@ export const MyOrders: React.FC = () => {
 				<>
 					<TableContainer
 						component={Paper}
+						ref={ordersContainerRef}
 						sx={{ ...luxeTableContainer, maxHeight: "none" }}
 					>
 						<Table>
@@ -151,7 +164,6 @@ export const MyOrders: React.FC = () => {
 							<TableRow
 								key={order._id}
 								hover
-								ref={index === 0 ? firstItemRef : undefined}
 							>
 										<TableCell sx={{ pl: 3 }}>
 											<Typography

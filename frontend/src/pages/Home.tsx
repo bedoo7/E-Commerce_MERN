@@ -81,6 +81,7 @@ export const Home: React.FC = () => {
 	const [showFilters, setShowFilters] = useState(false);
 	const debouncedSearch = useDebounce(search, 400);
 	const searchBarRef = React.useRef<HTMLDivElement>(null);
+	const prevPage = React.useRef(1);
 
 	const scrollToSearchBar = React.useCallback(() => {
 		requestAnimationFrame(() => {
@@ -276,8 +277,9 @@ export const Home: React.FC = () => {
 	};
 
 	useEffect(() => {
-		if (productsData?.data && productsData.data.length > 0) {
+		if (productsData?.data && productsData.data.length > 0 && page !== prevPage.current) {
 			scrollToSearchBar();
+			prevPage.current = page;
 		}
 	}, [page, productsData]);
 
@@ -435,6 +437,7 @@ export const Home: React.FC = () => {
 						<Typography
 							component="h1"
 							variant="h2"
+							className="display-heading"
 							sx={{
 								fontWeight: 800,
 								color: "#fff",

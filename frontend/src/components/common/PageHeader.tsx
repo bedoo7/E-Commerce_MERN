@@ -41,6 +41,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 				<Typography
 					variant="h4"
 					component="h1"
+					className="display-heading"
 					sx={{
 						fontWeight: 800,
 						letterSpacing: "-0.03em",

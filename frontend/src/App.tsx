@@ -5,6 +5,7 @@ import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./context/AuthContext";
 import { ColorModeProvider } from "./context/ColorModeContext";
 import { AppRoutes } from "./routes/AppRoutes";
+import { ScrollToTop } from "./components/common/ScrollToTop";
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -21,6 +22,7 @@ function App() {
 			<ColorModeProvider>
 				<AuthProvider>
 					<BrowserRouter>
+						<ScrollToTop />
 						<AppRoutes />
 						<Toaster
 							position="top-right"

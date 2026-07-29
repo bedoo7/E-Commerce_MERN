@@ -84,7 +84,6 @@ import {
 	luxeSurface,
 	luxeStickySummary,
 } from "../theme/luxeStyles";
-import { usePaginationScroll } from "../hooks/usePaginationScroll";
 import { useDebounce } from "../hooks/useDebounce";
 import { AdminFilterToolbar } from "../components/admin/AdminFilterToolbar";
 import toast from "react-hot-toast";
@@ -120,31 +119,59 @@ export const AdminDashboard: React.FC = () => {
 	const [userPage, setUserPage] = useState(1);
 	const [couponPage, setCouponPage] = useState(1);
 	const limit = 12;
-	const {
-		firstItemRef: productRef,
-		scrollToFirstItem: scrollProducts,
-	} = usePaginationScroll<HTMLTableRowElement>();
-	const {
-		firstItemRef: orderRef,
-		scrollToFirstItem: scrollOrders,
-	} = usePaginationScroll<HTMLTableRowElement>();
-	const {
-		firstItemRef: userRef,
-		scrollToFirstItem: scrollUsers,
-	} = usePaginationScroll<HTMLTableRowElement>();
-	const {
-		firstItemRef: couponRef,
-		scrollToFirstItem: scrollCoupons,
-	} = usePaginationScroll<HTMLTableRowElement>();
+	const productContainerRef = React.useRef<HTMLDivElement>(null);
+	const orderContainerRef = React.useRef<HTMLDivElement>(null);
+	const userContainerRef = React.useRef<HTMLDivElement>(null);
+	const couponContainerRef = React.useRef<HTMLDivElement>(null);
 
+	const prevProductPage = React.useRef(1);
+	const prevOrderPage = React.useRef(1);
+	const prevUserPage = React.useRef(1);
+	const prevCouponPage = React.useRef(1);
 
+	const scrollToProduct = React.useCallback(() => {
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				productContainerRef.current?.scrollIntoView({
+					behavior: "smooth",
+					block: "start",
+				});
+			});
+		});
+	}, []);
 
+	const scrollToOrder = React.useCallback(() => {
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				orderContainerRef.current?.scrollIntoView({
+					behavior: "smooth",
+					block: "start",
+				});
+			});
+		});
+	}, []);
 
+	const scrollToUser = React.useCallback(() => {
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				userContainerRef.current?.scrollIntoView({
+					behavior: "smooth",
+					block: "start",
+				});
+			});
+		});
+	}, []);
 
-
-
-
-
+	const scrollToCoupon = React.useCallback(() => {
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				couponContainerRef.current?.scrollIntoView({
+					behavior: "smooth",
+					block: "start",
+				});
+			});
+		});
+	}, []);
 
 	const [productSearch, setProductSearch] = useState("");
 	const debouncedProductSearch = useDebounce(productSearch, 300);
@@ -154,7 +181,9 @@ export const AdminDashboard: React.FC = () => {
 	const [productMinPrice, setProductMinPrice] = useState("");
 	const [productMaxPrice, setProductMaxPrice] = useState("");
 	const [productSortBy, setProductSortBy] = useState("createdAt");
-	const [productSortOrder, setProductSortOrder] = useState<"asc" | "desc">("desc");
+	const [productSortOrder, setProductSortOrder] = useState<"asc" | "desc">(
+		"desc",
+	);
 
 	const [orderSearch, setOrderSearch] = useState("");
 	const debouncedOrderSearch = useDebounce(orderSearch, 300);
@@ -184,7 +213,9 @@ export const AdminDashboard: React.FC = () => {
 	const [couponStartDate, setCouponStartDate] = useState("");
 	const [couponEndDate, setCouponEndDate] = useState("");
 	const [couponSortBy, setCouponSortBy] = useState("createdAt");
-	const [couponSortOrder, setCouponSortOrder] = useState<"asc" | "desc">("desc");
+	const [couponSortOrder, setCouponSortOrder] = useState<"asc" | "desc">(
+		"desc",
+	);
 
 	// Product management state
 	const [productDialogOpen, setProductDialogOpen] = useState(false);
@@ -289,11 +320,29 @@ export const AdminDashboard: React.FC = () => {
 			params.set("sortOrder", userSortOrder);
 		}
 		return params.toString();
-	}, [userPage, debouncedUserSearch, userRole, userIsActive, userStartDate, userEndDate, userSortBy, userSortOrder]);
+	}, [
+		userPage,
+		debouncedUserSearch,
+		userRole,
+		userIsActive,
+		userStartDate,
+		userEndDate,
+		userSortBy,
+		userSortOrder,
+	]);
 
 	const { data: usersData, isLoading: usersLoading } = useQuery<IUsersResponse>(
 		{
-			queryKey: ["admin-users", userPage, debouncedUserSearch, userRole, userIsActive, userStartDate, userEndDate, userSortBy],
+			queryKey: [
+				"admin-users",
+				userPage,
+				debouncedUserSearch,
+				userRole,
+				userIsActive,
+				userStartDate,
+				userEndDate,
+				userSortBy,
+			],
 			queryFn: async () => {
 				const res = await api.get<IUsersResponse>(
 					`/user/getAllUsers?${buildUserQueryParams}`,
@@ -319,12 +368,32 @@ export const AdminDashboard: React.FC = () => {
 			params.set("sortOrder", orderSortOrder);
 		}
 		return params.toString();
-	}, [orderPage, debouncedOrderSearch, orderStatus, orderMinPrice, orderMaxPrice, orderStartDate, orderEndDate, orderSortBy, orderSortOrder]);
+	}, [
+		orderPage,
+		debouncedOrderSearch,
+		orderStatus,
+		orderMinPrice,
+		orderMaxPrice,
+		orderStartDate,
+		orderEndDate,
+		orderSortBy,
+		orderSortOrder,
+	]);
 
 	const { data: ordersData, isLoading: ordersLoading } = useQuery<
 		IPaginatedResponse<IOrder>
 	>({
-		queryKey: ["admin-orders", orderPage, debouncedOrderSearch, orderStatus, orderMinPrice, orderMaxPrice, orderStartDate, orderEndDate, orderSortBy],
+		queryKey: [
+			"admin-orders",
+			orderPage,
+			debouncedOrderSearch,
+			orderStatus,
+			orderMinPrice,
+			orderMaxPrice,
+			orderStartDate,
+			orderEndDate,
+			orderSortBy,
+		],
 		queryFn: async () => {
 			const res = await api.get<IPaginatedResponse<IOrder>>(
 				`/order/admin/all?${buildOrderQueryParams}`,
@@ -339,11 +408,15 @@ export const AdminDashboard: React.FC = () => {
 		params.set("page", String(productPage));
 		params.set("limit", String(limit));
 		if (debouncedProductSearch) params.set("search", debouncedProductSearch);
-		if (productCategory && productCategory !== "All") params.set("category", productCategory);
-		if (productBrand && productBrand !== "All") params.set("brand", productBrand);
+		if (productCategory && productCategory !== "All")
+			params.set("category", productCategory);
+		if (productBrand && productBrand !== "All")
+			params.set("brand", productBrand);
 		if (productStockStatus === "instock") params.set("inStock", "true");
-		if (productStockStatus === "lowstock") params.set("stockStatus", "lowstock");
-		if (productStockStatus === "outofstock") params.set("stockStatus", "outofstock");
+		if (productStockStatus === "lowstock")
+			params.set("stockStatus", "lowstock");
+		if (productStockStatus === "outofstock")
+			params.set("stockStatus", "outofstock");
 		if (productMinPrice) params.set("minPrice", productMinPrice);
 		if (productMaxPrice) params.set("maxPrice", productMaxPrice);
 		if (productSortBy) {
@@ -351,12 +424,32 @@ export const AdminDashboard: React.FC = () => {
 			params.set("sortOrder", productSortOrder);
 		}
 		return params.toString();
-	}, [productPage, debouncedProductSearch, productCategory, productBrand, productStockStatus, productMinPrice, productMaxPrice, productSortBy, productSortOrder]);
+	}, [
+		productPage,
+		debouncedProductSearch,
+		productCategory,
+		productBrand,
+		productStockStatus,
+		productMinPrice,
+		productMaxPrice,
+		productSortBy,
+		productSortOrder,
+	]);
 
 	const { data: productsData, isLoading: productsLoading } = useQuery<
 		IPaginatedResponse<IProduct>
 	>({
-		queryKey: ["admin-products", productPage, debouncedProductSearch, productCategory, productBrand, productStockStatus, productMinPrice, productMaxPrice, productSortBy],
+		queryKey: [
+			"admin-products",
+			productPage,
+			debouncedProductSearch,
+			productCategory,
+			productBrand,
+			productStockStatus,
+			productMinPrice,
+			productMaxPrice,
+			productSortBy,
+		],
 		queryFn: async () => {
 			const res = await api.get<IPaginatedResponse<IProduct>>(
 				`/product?${buildProductQueryParams}`,
@@ -401,44 +494,84 @@ export const AdminDashboard: React.FC = () => {
 			params.set("sortOrder", couponSortOrder);
 		}
 		return params.toString();
-	}, [couponPage, debouncedCouponSearch, couponStatus, couponDiscountType, couponMinDiscount, couponMaxDiscount, couponStartDate, couponEndDate, couponSortBy, couponSortOrder]);
+	}, [
+		couponPage,
+		debouncedCouponSearch,
+		couponStatus,
+		couponDiscountType,
+		couponMinDiscount,
+		couponMaxDiscount,
+		couponStartDate,
+		couponEndDate,
+		couponSortBy,
+		couponSortOrder,
+	]);
 
 	const { data: couponsData, isLoading: couponsLoading } = useQuery<
 		IPaginatedResponse<ICoupon>
 	>({
-		queryKey: ["admin-coupons", couponPage, debouncedCouponSearch, couponStatus, couponDiscountType, couponMinDiscount, couponMaxDiscount, couponStartDate, couponEndDate, couponSortBy],
+		queryKey: [
+			"admin-coupons",
+			couponPage,
+			debouncedCouponSearch,
+			couponStatus,
+			couponDiscountType,
+			couponMinDiscount,
+			couponMaxDiscount,
+			couponStartDate,
+			couponEndDate,
+			couponSortBy,
+		],
 		queryFn: async () => {
 			const res = await api.get<IPaginatedResponse<ICoupon>>(
 				`/coupon?${buildCouponQueryParams}`,
 			);
 			return res.data;
 		},
-	});	// Scroll to first item when page changes and new data renders
+	}); // Scroll to tab content only when page actually changes (not on initial mount)
 	useEffect(() => {
-		if (productsData?.data && productsData.data.length > 0) {
-			scrollProducts();
+		if (
+			productsData?.data &&
+			productsData.data.length > 0 &&
+			productPage !== prevProductPage.current
+		) {
+			scrollToProduct();
+			prevProductPage.current = productPage;
 		}
 	}, [productPage, productsData]);
 
 	useEffect(() => {
-		if (ordersData?.data && ordersData.data.length > 0) {
-			scrollOrders();
+		if (
+			ordersData?.data &&
+			ordersData.data.length > 0 &&
+			orderPage !== prevOrderPage.current
+		) {
+			scrollToOrder();
+			prevOrderPage.current = orderPage;
 		}
 	}, [orderPage, ordersData]);
 
 	useEffect(() => {
-		if (usersData?.users && usersData.users.length > 0) {
-			scrollUsers();
+		if (
+			usersData?.users &&
+			usersData.users.length > 0 &&
+			userPage !== prevUserPage.current
+		) {
+			scrollToUser();
+			prevUserPage.current = userPage;
 		}
 	}, [userPage, usersData]);
 
 	useEffect(() => {
-		if (couponsData?.data && couponsData.data.length > 0) {
-			scrollCoupons();
+		if (
+			couponsData?.data &&
+			couponsData.data.length > 0 &&
+			couponPage !== prevCouponPage.current
+		) {
+			scrollToCoupon();
+			prevCouponPage.current = couponPage;
 		}
 	}, [couponPage, couponsData]);
-
-
 
 	const coupons = couponsData?.data ?? [];
 	const couponsPagination = couponsData?.pagination;
@@ -2035,7 +2168,7 @@ export const AdminDashboard: React.FC = () => {
 				</Tabs>
 
 				<TabPanel value={tabIndex} index={0}>
-					<Box px={3}>
+					<Box px={3} ref={productContainerRef}>
 						<Box
 							display="flex"
 							justifyContent="space-between"
@@ -2070,7 +2203,13 @@ export const AdminDashboard: React.FC = () => {
 										setProductCategory(value);
 										setProductPage(1);
 									},
-									options: [{ value: "All", label: "All Categories" }, ...(categoryOptions || []).map(c => ({ value: c, label: c }))],
+									options: [
+										{ value: "All", label: "All Categories" },
+										...(categoryOptions || []).map((c) => ({
+											value: c,
+											label: c,
+										})),
+									],
 								},
 								{
 									key: "brand",
@@ -2081,7 +2220,13 @@ export const AdminDashboard: React.FC = () => {
 										setProductBrand(value);
 										setProductPage(1);
 									},
-									options: [{ value: "All", label: "All Brands" }, ...(brandOptions || []).map(b => ({ value: b, label: b }))],
+									options: [
+										{ value: "All", label: "All Brands" },
+										...(brandOptions || []).map((b) => ({
+											value: b,
+											label: b,
+										})),
+									],
 								},
 								{
 									key: "stock",
@@ -2134,11 +2279,61 @@ export const AdminDashboard: React.FC = () => {
 							onClearAll={clearProductFilters}
 							hasActiveFilters={productHasActiveFilters}
 							activeFilterChips={[
-								...(productCategory !== "All" ? [{ label: `Category: ${productCategory}`, onClear: () => { setProductCategory("All"); setProductPage(1); } }] : []),
-								...(productBrand !== "All" ? [{ label: `Brand: ${productBrand}`, onClear: () => { setProductBrand("All"); setProductPage(1); } }] : []),
-								...(productStockStatus !== "all" ? [{ label: `Stock: ${productStockStatus}`, onClear: () => { setProductStockStatus("all"); setProductPage(1); } }] : []),
-								...(productMinPrice ? [{ label: `Min Price: $${productMinPrice}`, onClear: () => { setProductMinPrice(""); setProductPage(1); } }] : []),
-								...(productMaxPrice ? [{ label: `Max Price: $${productMaxPrice}`, onClear: () => { setProductMaxPrice(""); setProductPage(1); } }] : []),
+								...(productCategory !== "All"
+									? [
+											{
+												label: `Category: ${productCategory}`,
+												onClear: () => {
+													setProductCategory("All");
+													setProductPage(1);
+												},
+											},
+										]
+									: []),
+								...(productBrand !== "All"
+									? [
+											{
+												label: `Brand: ${productBrand}`,
+												onClear: () => {
+													setProductBrand("All");
+													setProductPage(1);
+												},
+											},
+										]
+									: []),
+								...(productStockStatus !== "all"
+									? [
+											{
+												label: `Stock: ${productStockStatus}`,
+												onClear: () => {
+													setProductStockStatus("all");
+													setProductPage(1);
+												},
+											},
+										]
+									: []),
+								...(productMinPrice
+									? [
+											{
+												label: `Min Price: $${productMinPrice}`,
+												onClear: () => {
+													setProductMinPrice("");
+													setProductPage(1);
+												},
+											},
+										]
+									: []),
+								...(productMaxPrice
+									? [
+											{
+												label: `Max Price: $${productMaxPrice}`,
+												onClear: () => {
+													setProductMaxPrice("");
+													setProductPage(1);
+												},
+											},
+										]
+									: []),
 							]}
 						/>
 
@@ -2159,12 +2354,8 @@ export const AdminDashboard: React.FC = () => {
 											</TableRow>
 										</TableHead>
 										<TableBody>
-											{products.map((product, index) => (
-												<TableRow
-													key={product._id}
-													hover
-													ref={index === 0 ? productRef : undefined}
-												>
+											{products.map((product) => (
+												<TableRow key={product._id} hover>
 													<TableCell>
 														<Box
 															component="img"
@@ -2240,7 +2431,6 @@ export const AdminDashboard: React.FC = () => {
 											pagination={productsPagination}
 											onPageChange={(p) => {
 												setProductPage(p);
-												
 											}}
 										/>
 									</Box>
@@ -2251,7 +2441,7 @@ export const AdminDashboard: React.FC = () => {
 				</TabPanel>
 
 				<TabPanel value={tabIndex} index={1}>
-					<Box px={3}>
+					<Box px={3} ref={orderContainerRef}>
 						<Typography variant="h6" fontWeight={700} mb={3}>
 							All Orders
 						</Typography>
@@ -2335,11 +2525,61 @@ export const AdminDashboard: React.FC = () => {
 							onClearAll={clearOrderFilters}
 							hasActiveFilters={orderHasActiveFilters}
 							activeFilterChips={[
-								...(orderStatus ? [{ label: `Status: ${orderStatus}`, onClear: () => { setOrderStatus(""); setOrderPage(1); } }] : []),
-								...(orderStartDate ? [{ label: `From: ${orderStartDate}`, onClear: () => { setOrderStartDate(""); setOrderPage(1); } }] : []),
-								...(orderEndDate ? [{ label: `To: ${orderEndDate}`, onClear: () => { setOrderEndDate(""); setOrderPage(1); } }] : []),
-								...(orderMinPrice ? [{ label: `Min: $${orderMinPrice}`, onClear: () => { setOrderMinPrice(""); setOrderPage(1); } }] : []),
-								...(orderMaxPrice ? [{ label: `Max: $${orderMaxPrice}`, onClear: () => { setOrderMaxPrice(""); setOrderPage(1); } }] : []),
+								...(orderStatus
+									? [
+											{
+												label: `Status: ${orderStatus}`,
+												onClear: () => {
+													setOrderStatus("");
+													setOrderPage(1);
+												},
+											},
+										]
+									: []),
+								...(orderStartDate
+									? [
+											{
+												label: `From: ${orderStartDate}`,
+												onClear: () => {
+													setOrderStartDate("");
+													setOrderPage(1);
+												},
+											},
+										]
+									: []),
+								...(orderEndDate
+									? [
+											{
+												label: `To: ${orderEndDate}`,
+												onClear: () => {
+													setOrderEndDate("");
+													setOrderPage(1);
+												},
+											},
+										]
+									: []),
+								...(orderMinPrice
+									? [
+											{
+												label: `Min: $${orderMinPrice}`,
+												onClear: () => {
+													setOrderMinPrice("");
+													setOrderPage(1);
+												},
+											},
+										]
+									: []),
+								...(orderMaxPrice
+									? [
+											{
+												label: `Max: $${orderMaxPrice}`,
+												onClear: () => {
+													setOrderMaxPrice("");
+													setOrderPage(1);
+												},
+											},
+										]
+									: []),
 							]}
 						/>
 
@@ -2370,11 +2610,7 @@ export const AdminDashboard: React.FC = () => {
 											{orders.map((order, index) => {
 												const user = order.userId as IUser;
 												return (
-													<TableRow
-														key={order._id}
-														hover
-														ref={index === 0 ? orderRef : undefined}
-													>
+													<TableRow key={order._id} hover>
 														<TableCell>
 															<Typography
 																variant="body2"
@@ -2421,7 +2657,13 @@ export const AdminDashboard: React.FC = () => {
 															{new Date(order.createdAt!).toLocaleDateString()}
 														</TableCell>
 														<TableCell>
-															<Tooltip title={order.status === "cancelled" ? "Cancelled orders cannot be modified" : ""}>
+															<Tooltip
+																title={
+																	order.status === "cancelled"
+																		? "Cancelled orders cannot be modified"
+																		: ""
+																}
+															>
 																<span>
 																	<Button
 																		size="small"
@@ -2446,7 +2688,6 @@ export const AdminDashboard: React.FC = () => {
 											pagination={ordersPagination}
 											onPageChange={(p) => {
 												setOrderPage(p);
-												
 											}}
 										/>
 									</Box>
@@ -2457,7 +2698,7 @@ export const AdminDashboard: React.FC = () => {
 				</TabPanel>
 
 				<TabPanel value={tabIndex} index={2}>
-					<Box px={3}>
+					<Box px={3} ref={userContainerRef}>
 						<Box
 							display="flex"
 							justifyContent="space-between"
@@ -2548,10 +2789,50 @@ export const AdminDashboard: React.FC = () => {
 							onClearAll={clearUserFilters}
 							hasActiveFilters={userHasActiveFilters}
 							activeFilterChips={[
-								...(userRole ? [{ label: `Role: ${userRole}`, onClear: () => { setUserRole(""); setUserPage(1); } }] : []),
-								...(userIsActive ? [{ label: `Status: ${userIsActive === "true" ? "Active" : "Inactive"}`, onClear: () => { setUserIsActive(""); setUserPage(1); } }] : []),
-								...(userStartDate ? [{ label: `Joined From: ${userStartDate}`, onClear: () => { setUserStartDate(""); setUserPage(1); } }] : []),
-								...(userEndDate ? [{ label: `Joined To: ${userEndDate}`, onClear: () => { setUserEndDate(""); setUserPage(1); } }] : []),
+								...(userRole
+									? [
+											{
+												label: `Role: ${userRole}`,
+												onClear: () => {
+													setUserRole("");
+													setUserPage(1);
+												},
+											},
+										]
+									: []),
+								...(userIsActive
+									? [
+											{
+												label: `Status: ${userIsActive === "true" ? "Active" : "Inactive"}`,
+												onClear: () => {
+													setUserIsActive("");
+													setUserPage(1);
+												},
+											},
+										]
+									: []),
+								...(userStartDate
+									? [
+											{
+												label: `Joined From: ${userStartDate}`,
+												onClear: () => {
+													setUserStartDate("");
+													setUserPage(1);
+												},
+											},
+										]
+									: []),
+								...(userEndDate
+									? [
+											{
+												label: `Joined To: ${userEndDate}`,
+												onClear: () => {
+													setUserEndDate("");
+													setUserPage(1);
+												},
+											},
+										]
+									: []),
 							]}
 						/>
 
@@ -2577,12 +2858,8 @@ export const AdminDashboard: React.FC = () => {
 											</TableRow>
 										</TableHead>
 										<TableBody>
-											{usersData?.users.map((user, index) => (
-												<TableRow
-													key={user._id}
-													hover
-													ref={index === 0 ? userRef : undefined}
-												>
+											{usersData?.users.map((user) => (
+												<TableRow key={user._id} hover>
 													<TableCell>
 														<Typography fontWeight={600}>
 															{user.firstName} {user.lastName}
@@ -2644,7 +2921,6 @@ export const AdminDashboard: React.FC = () => {
 											pagination={usersPagination}
 											onPageChange={(p) => {
 												setUserPage(p);
-												
 											}}
 										/>
 									</Box>
@@ -2655,7 +2931,7 @@ export const AdminDashboard: React.FC = () => {
 				</TabPanel>
 
 				<TabPanel value={tabIndex} index={3}>
-					<Box px={3}>
+					<Box px={3} ref={couponContainerRef}>
 						<Box
 							display="flex"
 							justifyContent="space-between"
@@ -2767,12 +3043,72 @@ export const AdminDashboard: React.FC = () => {
 							onClearAll={clearCouponFilters}
 							hasActiveFilters={couponHasActiveFilters}
 							activeFilterChips={[
-								...(couponStatus ? [{ label: `Status: ${couponStatus}`, onClear: () => { setCouponStatus(""); setCouponPage(1); } }] : []),
-								...(couponDiscountType ? [{ label: `Type: ${couponDiscountType}`, onClear: () => { setCouponDiscountType(""); setCouponPage(1); } }] : []),
-								...(couponMinDiscount ? [{ label: `Min Discount: ${couponMinDiscount}`, onClear: () => { setCouponMinDiscount(""); setCouponPage(1); } }] : []),
-								...(couponMaxDiscount ? [{ label: `Max Discount: ${couponMaxDiscount}`, onClear: () => { setCouponMaxDiscount(""); setCouponPage(1); } }] : []),
-								...(couponStartDate ? [{ label: `Created From: ${couponStartDate}`, onClear: () => { setCouponStartDate(""); setCouponPage(1); } }] : []),
-								...(couponEndDate ? [{ label: `Created To: ${couponEndDate}`, onClear: () => { setCouponEndDate(""); setCouponPage(1); } }] : []),
+								...(couponStatus
+									? [
+											{
+												label: `Status: ${couponStatus}`,
+												onClear: () => {
+													setCouponStatus("");
+													setCouponPage(1);
+												},
+											},
+										]
+									: []),
+								...(couponDiscountType
+									? [
+											{
+												label: `Type: ${couponDiscountType}`,
+												onClear: () => {
+													setCouponDiscountType("");
+													setCouponPage(1);
+												},
+											},
+										]
+									: []),
+								...(couponMinDiscount
+									? [
+											{
+												label: `Min Discount: ${couponMinDiscount}`,
+												onClear: () => {
+													setCouponMinDiscount("");
+													setCouponPage(1);
+												},
+											},
+										]
+									: []),
+								...(couponMaxDiscount
+									? [
+											{
+												label: `Max Discount: ${couponMaxDiscount}`,
+												onClear: () => {
+													setCouponMaxDiscount("");
+													setCouponPage(1);
+												},
+											},
+										]
+									: []),
+								...(couponStartDate
+									? [
+											{
+												label: `Created From: ${couponStartDate}`,
+												onClear: () => {
+													setCouponStartDate("");
+													setCouponPage(1);
+												},
+											},
+										]
+									: []),
+								...(couponEndDate
+									? [
+											{
+												label: `Created To: ${couponEndDate}`,
+												onClear: () => {
+													setCouponEndDate("");
+													setCouponPage(1);
+												},
+											},
+										]
+									: []),
 							]}
 						/>
 
@@ -2802,12 +3138,8 @@ export const AdminDashboard: React.FC = () => {
 										</TableRow>
 									</TableHead>
 									<TableBody>
-										{coupons.map((coupon, index) => (
-											<TableRow
-												key={coupon._id}
-												hover
-												ref={index === 0 ? couponRef : undefined}
-											>
+										{coupons.map((coupon) => (
+											<TableRow key={coupon._id} hover>
 												<TableCell>
 													<Typography variant="subtitle2" fontWeight={700}>
 														{coupon.code}
@@ -2847,7 +3179,8 @@ export const AdminDashboard: React.FC = () => {
 																	setEditCouponId(coupon._id);
 																	setCouponForm({
 																		code: coupon.code,
-																		discountType: coupon.discountType || "percentage",
+																		discountType:
+																			coupon.discountType || "percentage",
 																		discountPercent: coupon.discountPercent,
 																		discountValue: coupon.discountValue ?? 0,
 																		minOrderAmount: coupon.minOrderAmount,
@@ -2888,7 +3221,6 @@ export const AdminDashboard: React.FC = () => {
 									pagination={couponsPagination}
 									onPageChange={(p) => {
 										setCouponPage(p);
-										
 									}}
 								/>
 							</Box>
@@ -3245,13 +3577,15 @@ export const AdminDashboard: React.FC = () => {
 			<Dialog
 				open={couponDialogOpen}
 				onClose={() => {
-									setCouponDialogOpen(false);
-									setEditCouponId(null);
-								}}
+					setCouponDialogOpen(false);
+					setEditCouponId(null);
+				}}
 				fullWidth
 				maxWidth="md"
 			>
-				<DialogTitle fontWeight={700}>{editCouponId ? "Edit Coupon" : "Create Coupon"}</DialogTitle>
+				<DialogTitle fontWeight={700}>
+					{editCouponId ? "Edit Coupon" : "Create Coupon"}
+				</DialogTitle>
 				<DialogContent>
 					<Grid container spacing={2} sx={{ mt: 0.5 }}>
 						<Grid item xs={12} sm={6}>
@@ -3366,7 +3700,9 @@ export const AdminDashboard: React.FC = () => {
 								});
 							}
 						}}
-						disabled={saveCouponMutation.isPending || updateCouponMutation.isPending}
+						disabled={
+							saveCouponMutation.isPending || updateCouponMutation.isPending
+						}
 					>
 						{editCouponId ? "Update Coupon" : "Save Coupon"}
 					</Button>
