@@ -1091,7 +1091,7 @@ export const AdminDashboard: React.FC = () => {
 								),
 							},
 						].map((stat) => (
-							<Grid item xs={12} sm={6} md={4} lg key={stat.label}>
+							<Grid item xs={12} sm={6} md={4} lg={3} key={stat.label}>
 								<Card
 									sx={{
 										...luxeSurface,
@@ -1214,7 +1214,7 @@ export const AdminDashboard: React.FC = () => {
 								icon: <PercentIcon sx={{ fontSize: 40 }} color="error" />,
 							},
 						].map((stat) => (
-							<Grid item xs={12} sm={6} md={4} lg key={stat.label}>
+							<Grid item xs={12} sm={6} md={4} lg={3} key={stat.label}>
 								<Card
 									sx={{
 										...luxeSurface,
@@ -1423,18 +1423,19 @@ export const AdminDashboard: React.FC = () => {
 							</Card>
 						</Grid>
 						<Grid item xs={12} md={6}>
-							<Card sx={{ ...luxeSurface, borderRadius: 3 }}>
+							{/* Never Ordered */}
+							<Card sx={{ ...luxeSurface, borderRadius: 3, mb: 3 }}>
 								<CardContent>
 									<Typography variant="subtitle1" fontWeight={700} mb={2}>
-										Low Stock Products
+										Never Ordered Products
 									</Typography>
-									{(analytics.products?.lowStockProducts || []).length === 0 ? (
+									{(analytics.products?.neverOrdered || []).length === 0 ? (
 										<Typography color="text.secondary" variant="body2">
-											All products well stocked.
+											All products have been ordered.
 										</Typography>
 									) : (
-										<Box sx={{ maxHeight: 300, overflow: "auto" }}>
-											{(analytics.products?.lowStockProducts || []).map(
+										<Box sx={{ maxHeight: 250, overflow: "auto" }}>
+											{(analytics.products?.neverOrdered || []).map(
 												(p: any) => (
 													<Box
 														key={p._id}
@@ -1448,9 +1449,9 @@ export const AdminDashboard: React.FC = () => {
 														}}
 													>
 														<Chip
-															label={p.stock + " left"}
+															label="Never sold"
 															size="small"
-															color={p.stock <= 2 ? "error" : "warning"}
+															color="default"
 															sx={{
 																whiteSpace: "nowrap",
 																overflow: "hidden",
@@ -1458,7 +1459,7 @@ export const AdminDashboard: React.FC = () => {
 																minHeight: 28,
 																height: 28,
 																fontWeight: 700,
-																minWidth: 70,
+																minWidth: 80,
 															}}
 														/>
 														<Box sx={{ flexGrow: 1 }}>
@@ -1469,7 +1470,7 @@ export const AdminDashboard: React.FC = () => {
 																variant="caption"
 																color="text.secondary"
 															>
-																{p.category}
+																{p.category} | Stock: {p.stock}
 															</Typography>
 														</Box>
 													</Box>
@@ -1481,59 +1482,6 @@ export const AdminDashboard: React.FC = () => {
 							</Card>
 						</Grid>
 					</Grid>
-
-					{/* Never Ordered */}
-					<Card sx={{ ...luxeSurface, borderRadius: 3, mb: 3 }}>
-						<CardContent>
-							<Typography variant="subtitle1" fontWeight={700} mb={2}>
-								Never Ordered Products
-							</Typography>
-							{(analytics.products?.neverOrdered || []).length === 0 ? (
-								<Typography color="text.secondary" variant="body2">
-									All products have been ordered.
-								</Typography>
-							) : (
-								<Box sx={{ maxHeight: 250, overflow: "auto" }}>
-									{(analytics.products?.neverOrdered || []).map((p: any) => (
-										<Box
-											key={p._id}
-											sx={{
-												display: "flex",
-												alignItems: "center",
-												gap: 2,
-												py: 1,
-												borderBottom: "1px solid",
-												borderColor: "divider",
-											}}
-										>
-											<Chip
-												label="Never sold"
-												size="small"
-												color="default"
-												sx={{
-													whiteSpace: "nowrap",
-													overflow: "hidden",
-													textOverflow: "ellipsis",
-													minHeight: 28,
-													height: 28,
-													fontWeight: 700,
-													minWidth: 80,
-												}}
-											/>
-											<Box sx={{ flexGrow: 1 }}>
-												<Typography variant="body2" fontWeight={600}>
-													{p.name}
-												</Typography>
-												<Typography variant="caption" color="text.secondary">
-													{p.category} | Stock: {p.stock}
-												</Typography>
-											</Box>
-										</Box>
-									))}
-								</Box>
-							)}
-						</CardContent>
-					</Card>
 
 					{/* ── Inventory Section ── */}
 					<Grid container spacing={3} mb={3}>
@@ -1980,7 +1928,7 @@ export const AdminDashboard: React.FC = () => {
 								),
 							},
 						].map((stat) => (
-							<Grid item xs={12} sm={6} md={4} lg={2} key={stat.label}>
+							<Grid item xs={12} sm={6} md={4} lg={3} key={stat.label}>
 								<Card
 									sx={{
 										...luxeSurface,
@@ -2426,7 +2374,7 @@ export const AdminDashboard: React.FC = () => {
 									</Table>
 								</TableContainer>
 								{productsPagination && (
-									<Box px={3} pb={2}>
+									<Box mt={2} pb={2}>
 										<PaginationComponent
 											pagination={productsPagination}
 											onPageChange={(p) => {
@@ -3216,7 +3164,7 @@ export const AdminDashboard: React.FC = () => {
 							</TableContainer>
 						)}
 						{couponsPagination && (
-							<Box px={3} pb={2}>
+							<Box mt={2} pb={2}>
 								<PaginationComponent
 									pagination={couponsPagination}
 									onPageChange={(p) => {
