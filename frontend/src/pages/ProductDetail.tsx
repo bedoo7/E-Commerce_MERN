@@ -16,15 +16,19 @@ import {
 	TextField,
 	Rating,
 	Paper,
+	Alert,
+	Avatar,
 } from "@mui/material";
 import AddShoppingCartIcon from "@mui/icons-material/AddShoppingCart";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import RemoveIcon from "@mui/icons-material/Remove";
 import AddIcon from "@mui/icons-material/Add";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import RateReviewIcon from "@mui/icons-material/RateReview";
 import { api } from "../api/axios";
 import { IProduct, IReviewResponse } from "../types";
-import { luxeSurface } from "../theme/luxeStyles";
+import { luxeSurface, luxeFadeIn } from "../theme/luxeStyles";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 
@@ -54,6 +58,15 @@ export const ProductDetail: React.FC = () => {
 		queryKey: ["product-reviews", id],
 		queryFn: async () => {
 			const res = await api.get<IReviewResponse>(`/review/product/${id}`);
+			return res.data;
+		},
+		enabled: !!id,
+	});
+
+	const { data: relatedProducts } = useQuery<IProduct[]>({
+		queryKey: ["related-products", id],
+		queryFn: async () => {
+			const res = await api.get<IProduct[]>(`/product/${id}/related`);
 			return res.data;
 		},
 		enabled: !!id,
@@ -353,7 +366,66 @@ export const ProductDetail: React.FC = () => {
 				</Grid>
 			</Card>
 
-			<Box mt={4}>
+			{relatedProducts && relatedProducts.length > 0 && (
+				<Box mt={6} sx={luxeFadeIn}>
+					<Typography variant="h5" fontWeight={800} mb={3}>
+						Related Products
+					</Typography>
+					<Grid container spacing={3}>
+						{relatedProducts.map((relatedProduct) => (
+							<Grid item xs={12} sm={6} md={3} key={relatedProduct._id}>
+								<Card
+									sx={{
+										borderRadius: 3,
+										border: "1px solid",
+										borderColor: "divider",
+										cursor: "pointer",
+										transition: "all 0.2s ease",
+										"&:hover": {
+											transform: "translateY(-4px)",
+											boxShadow: "0 12px 24px -8px rgba(0,0,0,0.12)",
+										},
+									}}
+									onClick={() => navigate(`/product/${relatedProduct._id}`)}
+								>
+									<CardMedia
+										component="img"
+										image={relatedProduct.imageUrl}
+										alt={relatedProduct.name}
+										sx={{
+											height: 200,
+											objectFit: "cover",
+										}}
+										onError={(e: any) => {
+											e.target.src =
+												"https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80";
+										}}
+									/>
+									<Box sx={{ p: 2 }}>
+										<Typography
+											variant="subtitle2"
+											fontWeight={700}
+											noWrap
+											mb={0.5}
+										>
+											{relatedProduct.name}
+										</Typography>
+										<Typography variant="body2" color="text.secondary" noWrap mb={1}>
+											{relatedProduct.brand}
+										</Typography>
+										<Typography variant="h6" fontWeight={800} color="primary">
+											${relatedProduct.price.toLocaleString()}
+										</Typography>
+									</Box>
+								</Card>
+							</Grid>
+						))}
+					</Grid>
+				</Box>
+			)}
+
+			{/* Customer Reviews */}
+			<Box mt={6} sx={luxeFadeIn}>
 				<Card
 					sx={{
 						borderRadius: 4,
@@ -361,11 +433,12 @@ export const ProductDetail: React.FC = () => {
 						borderColor: "divider",
 					}}
 				>
-					<CardMedia component="div" sx={{ p: 3 }}>
+					{/* Header */}
+					<Box sx={{ p: { xs: 2.5, md: 3.5 } }}>
 						<Stack
 							direction={{ xs: "column", sm: "row" }}
-							alignItems={{ xs: "flex-start", sm: "center" }}
 							justifyContent="space-between"
+							alignItems={{ xs: "flex-start", sm: "center" }}
 							spacing={2}
 						>
 							<Box>
@@ -384,47 +457,64 @@ export const ProductDetail: React.FC = () => {
 									readOnly
 									size="small"
 								/>
-								<Typography variant="h6" fontWeight={700}>
+								<Typography variant="h5" fontWeight={800}>
 									{(reviewsData?.averageRating ?? 0).toFixed(1)}
 								</Typography>
 							</Stack>
 						</Stack>
-					</CardMedia>
+					</Box>
+
 					<Divider />
-					<Box sx={{ p: 3 }}>
+
+					{/* Body: Summary + Write Review */}
+					<Box sx={{ p: { xs: 2.5, md: 3.5 } }}>
 						<Grid container spacing={3}>
+							{/* Left: Review Summary */}
 							<Grid item xs={12} md={4}>
-								<Paper elevation={0} sx={luxeSurface}>
-									<Typography variant="subtitle2" color="text.secondary" mb={1}>
+								<Paper
+									elevation={0}
+									sx={{
+										...luxeSurface,
+										p: 3,
+										textAlign: "center",
+									}}
+								>
+									<Typography
+										variant="subtitle2"
+										color="text.secondary"
+										gutterBottom
+									>
 										Review Summary
 									</Typography>
-									<Typography variant="h3" fontWeight={800}>
+									<Typography variant="h2" fontWeight={800} sx={{ lineHeight: 1 }}>
 										{(reviewsData?.averageRating ?? 0).toFixed(1)}
 									</Typography>
 									<Rating
 										value={reviewsData?.averageRating ?? 0}
 										precision={0.1}
 										readOnly
-										sx={{ mt: 1 }}
+										sx={{ my: 1 }}
 									/>
-									<Typography variant="body2" color="text.secondary" mt={1}>
+									<Typography variant="body2" color="text.secondary">
 										Based on {reviewsData?.totalReviews ?? 0} review
 										{(reviewsData?.totalReviews ?? 0) === 1 ? "" : "s"}
 									</Typography>
 								</Paper>
 							</Grid>
 
+							{/* Right: Write Review or Login */}
 							<Grid item xs={12} md={8}>
 								{isAuthenticated ? (
 									<Box
 										sx={{
-											p: 1.5,
+											p: 3,
 											borderRadius: 3,
 											border: "1px solid",
 											borderColor: "divider",
+											bgcolor: "background.paper",
 										}}
 									>
-										<Typography variant="subtitle1" fontWeight={700} mb={1.5}>
+										<Typography variant="subtitle1" fontWeight={700} mb={2}>
 											Write a Review
 										</Typography>
 										<Stack spacing={2}>
@@ -459,20 +549,94 @@ export const ProductDetail: React.FC = () => {
 										</Stack>
 									</Box>
 								) : (
-									<Typography variant="body2" color="text.secondary">
-										Please log in to leave a review for this product.
-									</Typography>
+									<Alert
+										severity="info"
+										sx={{
+											borderRadius: 3,
+											bgcolor: (theme) =>
+												theme.palette.mode === "dark"
+													? "rgba(59, 130, 246, 0.08)"
+													: "rgba(59, 130, 246, 0.04)",
+											border: "1px solid",
+											borderColor: "divider",
+										}}
+									>
+										<Box
+											sx={{
+												display: "flex",
+												alignItems: "center",
+												gap: 1.5,
+											}}
+										>
+											<InfoOutlinedIcon sx={{ color: "info.main" }} />
+											<Box>
+												<Typography
+													variant="subtitle2"
+													fontWeight={600}
+													color="info.main"
+												>
+													Sign in to share your thoughts
+												</Typography>
+												<Typography variant="body2" color="text.secondary">
+													Please log in to leave a review for this
+													product.
+												</Typography>
+											</Box>
+										</Box>
+									</Alert>
 								)}
 							</Grid>
 						</Grid>
+					</Box>
 
-						<Stack spacing={2} mt={3}>
-							{(reviewsData?.reviews ?? []).length === 0 ? (
-								<Typography variant="body2" color="text.secondary">
-									No reviews yet. Be the first to share your thoughts.
+					<Divider sx={{ mx: { xs: 2.5, md: 3.5 } }} />
+
+					{/* Reviews List or Empty State */}
+					<Box sx={{ p: { xs: 2.5, md: 3.5 } }}>
+						{(reviewsData?.reviews ?? []).length === 0 ? (
+							<Box
+								sx={{
+									textAlign: "center",
+									py: 6,
+									...luxeFadeIn,
+								}}
+							>
+								<Box
+									sx={{
+										width: 64,
+										height: 64,
+										borderRadius: "50%",
+										bgcolor: (theme) =>
+											theme.palette.mode === "dark"
+												? "rgba(129, 140, 248, 0.1)"
+												: "rgba(79, 70, 229, 0.06)",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										mx: "auto",
+										mb: 2,
+									}}
+								>
+									<RateReviewIcon
+										sx={{ fontSize: 32, color: "primary.main", opacity: 0.7 }}
+									/>
+								</Box>
+								<Typography variant="h6" fontWeight={700} gutterBottom>
+									No reviews yet
 								</Typography>
-							) : (
-								(reviewsData?.reviews ?? []).map((review) => {
+								<Typography
+									variant="body2"
+									color="text.secondary"
+									sx={{ maxWidth: 400, mx: "auto", lineHeight: 1.7 }}
+								>
+									Be the first to share your experience with this
+									product. Your feedback helps others make informed
+									decisions.
+								</Typography>
+							</Box>
+						) : (
+							<Stack spacing={2}>
+								{(reviewsData?.reviews ?? []).map((review) => {
 									const reviewerName =
 										typeof review.userId === "string"
 											? "Verified customer"
@@ -482,31 +646,83 @@ export const ProductDetail: React.FC = () => {
 										<Box
 											key={review._id}
 											sx={{
-												p: 2,
+												p: 2.5,
 												borderRadius: 3,
 												border: "1px solid",
 												borderColor: "divider",
+												bgcolor: "background.paper",
+												transition: "all 0.2s ease",
+												"&:hover": {
+													bgcolor: (theme) =>
+														theme.palette.mode === "dark"
+															? "rgba(129, 140, 248, 0.04)"
+															: "rgba(79, 70, 229, 0.02)",
+												},
 											}}
 										>
 											<Stack
 												direction="row"
 												justifyContent="space-between"
 												alignItems="center"
-												spacing={1}
+												spacing={2}
 											>
-												<Typography variant="subtitle1" fontWeight={700}>
-													{reviewerName}
-												</Typography>
-												<Rating value={review.rating} readOnly size="small" />
+												<Box
+													sx={{
+														display: "flex",
+														alignItems: "center",
+														gap: 1.5,
+													}}
+												>
+													<Avatar
+														sx={{
+															width: 36,
+															height: 36,
+															bgcolor: "primary.main",
+															fontSize: "0.875rem",
+														}}
+													>
+														{reviewerName === "Verified customer"
+															? "?"
+															: reviewerName
+																	.split(" ")
+																	.map((n) => n[0])
+																	.join("")}
+													</Avatar>
+													<Typography variant="subtitle1" fontWeight={700}>
+														{reviewerName}
+													</Typography>
+												</Box>
+												<Stack
+													direction="row"
+													alignItems="center"
+													spacing={1}
+												>
+													<Rating
+														value={review.rating}
+														readOnly
+														size="small"
+													/>
+													<Typography
+														variant="caption"
+														color="text.secondary"
+														sx={{ minWidth: 36 }}
+													>
+														{review.rating}.0
+													</Typography>
+												</Stack>
 											</Stack>
-											<Typography variant="body2" color="text.secondary" mt={1}>
+											<Typography
+												variant="body2"
+												color="text.secondary"
+												sx={{ mt: 1.5, lineHeight: 1.7 }}
+											>
 												{review.comment}
 											</Typography>
 										</Box>
 									);
-								})
-							)}
-						</Stack>
+								})}
+							</Stack>
+						)}
 					</Box>
 				</Card>
 			</Box>

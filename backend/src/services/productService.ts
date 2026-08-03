@@ -109,6 +109,18 @@ export const getProductById = async (productId: string) => {
 	return product;
 };
 
+export const getRelatedProducts = async (productId: string, limit = 4) => {
+	const product = await productModel.findById(productId).lean();
+	if (!product) {
+		throw new Error("Product not found");
+	}
+	const related = await productModel
+		.find({ _id: { $ne: productId }, category: product.category })
+		.limit(limit)
+		.lean();
+	return related;
+};
+
 export const createProduct = async (productData: Partial<IProduct>) => {
 	const data = { ...productData };
 	if (data.category) data.category = normalizeName(data.category);

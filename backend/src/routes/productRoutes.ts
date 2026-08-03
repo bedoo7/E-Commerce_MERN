@@ -4,6 +4,7 @@ import {
 	getProductBrands,
 	getProductCategories,
 	getProductById,
+	getRelatedProducts,
 	createProduct,
 	updateProduct,
 	deleteProduct,
@@ -44,6 +45,16 @@ router.get("/:id", async (req, res) => {
 	try {
 		const product = await getProductById(req.params.id);
 		res.status(200).json(product);
+	} catch (error: any) {
+		res.status(400).json({ message: error.message });
+	}
+});
+
+router.get("/:id/related", async (req, res) => {
+	try {
+		const limit = parseInt(req.query.limit as string) || 4;
+		const related = await getRelatedProducts(req.params.id, limit);
+		res.status(200).json(related);
 	} catch (error: any) {
 		res.status(400).json({ message: error.message });
 	}
