@@ -2,6 +2,8 @@ import express from "express";
 import {
 	getAllUsers,
 	getmebytoken,
+	getProfile,
+	updateProfile,
 	loginUser,
 	registerUser,
 	updateUser,
@@ -62,12 +64,28 @@ router.post("/login", async (req, res) => {
 	}
 });
 
-//to test the authentication and authorization middleware
-router.get("/profile", authenticate, (req, res) => {
+// Get current user profile
+router.get("/profile", authenticate, async (req: any, res) => {
 	try {
-		res.json({
-			message: "Welcome you are authenticated",
+		const user = await getProfile(req.user.id);
+		res.status(200).json(user);
+	} catch (error: any) {
+		res.status(400).json({ message: error.message });
+	}
+});
+
+// Update current user profile
+router.put("/profile", authenticate, async (req: any, res) => {
+	try {
+		const allowedFields = ["firstName", "lastName", "email", "phone", "address"];
+		const updateData: Record<string, any> = {};
+		Object.keys(req.body).forEach((key) => {
+			if (allowedFields.includes(key)) {
+				updateData[key] = req.body[key];
+			}
 		});
+		const user = await updateProfile(req.user.id, updateData);
+		res.status(200).json(user);
 	} catch (error: any) {
 		res.status(400).json({ message: error.message });
 	}

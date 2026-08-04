@@ -1061,19 +1061,21 @@ export const Home: React.FC = () => {
 								lg={3}
 								key={product._id}
 							>
-								<ProductCard
-									product={product}
-									onAddToCart={handleAddToCart}
-									onUpdateQuantity={handleUpdateQuantity}
-									onRemoveItem={handleRemoveItem}
-									cartQuantity={cartItemMap[product._id]}
-									isAddToCartPending={addToCartMutation.isPending}
-									isUpdatePending={
-										updateQuantityMutation.isPending ||
-										removeItemMutation.isPending
-									}
-									inWishlist={wishlistProductIds.has(product._id)}
-								/>
+							<ProductCard
+								product={product}
+								onAddToCart={handleAddToCart}
+								onUpdateQuantity={handleUpdateQuantity}
+								onRemoveItem={handleRemoveItem}
+								cartQuantity={cartItemMap[product._id]}
+								isAddToCartPending={addToCartMutation.isPending}
+								isUpdatePending={
+									updateQuantityMutation.isPending ||
+									removeItemMutation.isPending
+								}
+								inWishlist={wishlistProductIds.has(product._id)}
+								averageRating={(product as any).averageRating}
+								totalReviews={(product as any).totalReviews}
+							/>
 							</Grid>
 						))}
 					</Grid>

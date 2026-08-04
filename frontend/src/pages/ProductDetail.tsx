@@ -26,6 +26,7 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import AddIcon from "@mui/icons-material/Add";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import RateReviewIcon from "@mui/icons-material/RateReview";
+import LoginIcon from "@mui/icons-material/Login";
 import { api } from "../api/axios";
 import { IProduct, IReviewResponse } from "../types";
 import { luxeSurface, luxeFadeIn } from "../theme/luxeStyles";
@@ -466,128 +467,185 @@ export const ProductDetail: React.FC = () => {
 
 					<Divider />
 
-					{/* Body: Summary + Write Review */}
-					<Box sx={{ p: { xs: 2.5, md: 3.5 } }}>
-						<Grid container spacing={3}>
-							{/* Left: Review Summary */}
-							<Grid item xs={12} md={4}>
-								<Paper
-									elevation={0}
+				{/* Body: Summary + Write Review */}
+				<Box sx={{ p: { xs: 2.5, md: 3.5 } }}>
+					<Box
+						sx={{
+							display: "flex",
+							flexDirection: { xs: "column", md: "row" },
+							alignItems: { xs: "stretch", md: "stretch" },
+							gap: 2,
+						}}
+					>
+						{/* Left: Review Summary */}
+						<Box
+							sx={{
+								flex: { xs: "1 1 auto", md: "0 0 340px" },
+								maxWidth: { xs: "100%", md: 340 },
+								mx: { xs: 0, md: "auto" },
+							}}
+						>
+							<Paper
+								elevation={0}
+								sx={{
+									...luxeSurface,
+									p: 2.5,
+									textAlign: "center",
+									height: "100%",
+									display: "flex",
+									flexDirection: "column",
+									alignItems: "center",
+									justifyContent: "center",
+								}}
+							>
+								<Typography
+									variant="subtitle2"
+									color="text.secondary"
+									gutterBottom
+								>
+									Review Summary
+								</Typography>
+								<Typography variant="h3" fontWeight={800} sx={{ lineHeight: 1 }}>
+									{(reviewsData?.averageRating ?? 0).toFixed(1)}
+								</Typography>
+							<Rating
+								value={reviewsData?.averageRating ?? 0}
+								precision={0.1}
+								readOnly
+								sx={{ my: 1.5 }}
+							/>
+								<Typography variant="body2" color="text.secondary">
+									Based on {reviewsData?.totalReviews ?? 0} review
+									{(reviewsData?.totalReviews ?? 0) === 1 ? "" : "s"}
+								</Typography>
+							</Paper>
+						</Box>
+
+						{/* Right: Write Review or Login */}
+						<Box
+							sx={{
+								flex: { xs: "1 1 auto", md: "1 1 0" },
+								minWidth: 0,
+								display: "flex",
+								flexDirection: "column",
+								justifyContent: {
+									xs: "stretch",
+									md: isAuthenticated ? "stretch" : "center",
+								},
+							}}
+						>
+							{isAuthenticated ? (
+								<Box
 									sx={{
-										...luxeSurface,
 										p: 3,
-										textAlign: "center",
+										borderRadius: 3,
+										border: "1px solid",
+										borderColor: "divider",
+										bgcolor: "background.paper",
+										height: "100%",
 									}}
 								>
-									<Typography
-										variant="subtitle2"
-										color="text.secondary"
-										gutterBottom
-									>
-										Review Summary
+									<Typography variant="subtitle1" fontWeight={700} mb={2}>
+										Write a Review
 									</Typography>
-									<Typography variant="h2" fontWeight={800} sx={{ lineHeight: 1 }}>
-										{(reviewsData?.averageRating ?? 0).toFixed(1)}
-									</Typography>
-									<Rating
-										value={reviewsData?.averageRating ?? 0}
-										precision={0.1}
-										readOnly
-										sx={{ my: 1 }}
-									/>
-									<Typography variant="body2" color="text.secondary">
-										Based on {reviewsData?.totalReviews ?? 0} review
-										{(reviewsData?.totalReviews ?? 0) === 1 ? "" : "s"}
-									</Typography>
-								</Paper>
-							</Grid>
-
-							{/* Right: Write Review or Login */}
-							<Grid item xs={12} md={8}>
-								{isAuthenticated ? (
-									<Box
-										sx={{
-											p: 3,
-											borderRadius: 3,
-											border: "1px solid",
-											borderColor: "divider",
-											bgcolor: "background.paper",
-										}}
-									>
-										<Typography variant="subtitle1" fontWeight={700} mb={2}>
-											Write a Review
-										</Typography>
-										<Stack spacing={2}>
-											<Stack direction="row" alignItems="center" spacing={1}>
-												<Typography variant="body2" color="text.secondary">
-													Your rating:
-												</Typography>
-												<Rating
-													value={reviewRating}
-													onChange={(_, value) => setReviewRating(value || 5)}
-												/>
-											</Stack>
-											<TextField
-												fullWidth
-												multiline
-												rows={4}
-												label="Share your experience"
-												value={reviewComment}
-												onChange={(e) => setReviewComment(e.target.value)}
+									<Stack spacing={2}>
+										<Stack direction="row" alignItems="center" spacing={1}>
+											<Typography variant="body2" color="text.secondary">
+												Your rating:
+											</Typography>
+											<Rating
+												value={reviewRating}
+												onChange={(_, value) => setReviewRating(value || 5)}
 											/>
-											<Button
-												variant="contained"
-												onClick={handleReviewSubmit}
-												disabled={
-													reviewMutation.isPending || !reviewComment.trim()
-												}
-											>
-												{reviewMutation.isPending
-													? "Posting..."
-													: "Post Review"}
-											</Button>
 										</Stack>
-									</Box>
-								) : (
-									<Alert
-										severity="info"
-										sx={{
-											borderRadius: 3,
-											bgcolor: (theme) =>
-												theme.palette.mode === "dark"
-													? "rgba(59, 130, 246, 0.08)"
-													: "rgba(59, 130, 246, 0.04)",
-											border: "1px solid",
-											borderColor: "divider",
-										}}
-									>
-										<Box
-											sx={{
-												display: "flex",
-												alignItems: "center",
-												gap: 1.5,
-											}}
+										<TextField
+											fullWidth
+											multiline
+											rows={4}
+											label="Share your experience"
+											value={reviewComment}
+											onChange={(e) => setReviewComment(e.target.value)}
+										/>
+										<Button
+											variant="contained"
+											onClick={handleReviewSubmit}
+											disabled={
+												reviewMutation.isPending || !reviewComment.trim()
+											}
 										>
-											<InfoOutlinedIcon sx={{ color: "info.main" }} />
-											<Box>
-												<Typography
-													variant="subtitle2"
-													fontWeight={600}
-													color="info.main"
-												>
-													Sign in to share your thoughts
-												</Typography>
-												<Typography variant="body2" color="text.secondary">
-													Please log in to leave a review for this
-													product.
-												</Typography>
-											</Box>
+											{reviewMutation.isPending
+												? "Posting..."
+												: "Post Review"}
+										</Button>
+									</Stack>
+								</Box>
+							) : (
+							<Alert
+								icon={false}
+								severity="info"
+								sx={{
+									borderRadius: 3,
+									maxWidth: { xs: "100%", md: 480 },
+									alignSelf: { xs: "stretch", md: "center" },
+									bgcolor: (theme) =>
+										theme.palette.mode === "dark"
+											? "rgba(59, 130, 246, 0.08)"
+											: "rgba(59, 130, 246, 0.04)",
+									border: "1px solid",
+									borderColor: "divider",
+									transition: "all 0.2s ease",
+									p: { xs: 1.5, md: 2 },
+									"&:hover": {
+										bgcolor: (theme) =>
+											theme.palette.mode === "dark"
+												? "rgba(59, 130, 246, 0.12)"
+												: "rgba(59, 130, 246, 0.06)",
+									},
+								}}
+							>
+								<Box
+									sx={{
+										display: "flex",
+										alignItems: "flex-start",
+										gap: 1.5,
+									}}
+								>
+									<InfoOutlinedIcon sx={{ color: "info.main", mt: 0.25, fontSize: 20 }} />
+										<Box sx={{ flex: 1 }}>
+											<Typography
+												variant="subtitle2"
+												fontWeight={600}
+												color="info.main"
+											>
+												Sign in to share your thoughts
+											</Typography>
+											<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+												Please log in to leave a review for this
+												product.
+											</Typography>
+											<Button
+												variant="outlined"
+												size="small"
+												startIcon={<LoginIcon />}
+												onClick={() => navigate("/login")}
+												sx={{
+													borderColor: "info.main",
+													color: "info.main",
+													"&:hover": {
+														borderColor: "info.light",
+														bgcolor: "rgba(59, 130, 246, 0.08)",
+													},
+												}}
+											>
+												Sign In
+											</Button>
 										</Box>
-									</Alert>
-								)}
-							</Grid>
-						</Grid>
+									</Box>
+								</Alert>
+							)}
+						</Box>
 					</Box>
+				</Box>
 
 					<Divider sx={{ mx: { xs: 2.5, md: 3.5 } }} />
 
@@ -636,28 +694,44 @@ export const ProductDetail: React.FC = () => {
 							</Box>
 						) : (
 							<Stack spacing={2}>
-								{(reviewsData?.reviews ?? []).map((review) => {
-									const reviewerName =
-										typeof review.userId === "string"
-											? "Verified customer"
-											: `${review.userId.firstName} ${review.userId.lastName}`;
+							{(reviewsData?.reviews ?? []).map((review) => {
+								const reviewerName =
+									typeof review.userId === "string"
+										? "Verified customer"
+										: review.userId &&
+											review.userId.firstName &&
+											review.userId.lastName
+											? `${review.userId.firstName} ${review.userId.lastName}`
+											: "Verified customer";
+
+								const reviewDate = review.createdAt
+									? new Date(review.createdAt).toLocaleDateString("en-US", {
+											year: "numeric",
+											month: "short",
+											day: "numeric",
+										})
+									: "";
 
 									return (
 										<Box
 											key={review._id}
-											sx={{
-												p: 2.5,
-												borderRadius: 3,
+									sx={{
+										p: 2.5,
+										borderRadius: 3,
 												border: "1px solid",
 												borderColor: "divider",
 												bgcolor: "background.paper",
-												transition: "all 0.2s ease",
-												"&:hover": {
-													bgcolor: (theme) =>
-														theme.palette.mode === "dark"
-															? "rgba(129, 140, 248, 0.04)"
-															: "rgba(79, 70, 229, 0.02)",
-												},
+										transition: "all 0.25s ease",
+										"&:hover": {
+											borderColor: (theme) =>
+												theme.palette.mode === "dark"
+													? "rgba(129, 140, 248, 0.25)"
+													: "rgba(79, 70, 229, 0.15)",
+											boxShadow: (theme) =>
+												theme.palette.mode === "dark"
+													? "0 4px 16px -8px rgba(0, 0, 0, 0.35)"
+													: "0 4px 12px -6px rgba(15, 23, 42, 0.1)",
+										},
 											}}
 										>
 											<Stack
@@ -681,16 +755,23 @@ export const ProductDetail: React.FC = () => {
 															fontSize: "0.875rem",
 														}}
 													>
-														{reviewerName === "Verified customer"
-															? "?"
-															: reviewerName
-																	.split(" ")
-																	.map((n) => n[0])
-																	.join("")}
+												{reviewerName === "Verified customer"
+													? "V"
+													: reviewerName
+															.split(" ")
+															.map((n) => n[0])
+															.join("")}
 													</Avatar>
+												<Box>
 													<Typography variant="subtitle1" fontWeight={700}>
 														{reviewerName}
 													</Typography>
+													{reviewDate && (
+														<Typography variant="caption" color="text.secondary">
+															{reviewDate}
+														</Typography>
+													)}
+												</Box>
 												</Box>
 												<Stack
 													direction="row"

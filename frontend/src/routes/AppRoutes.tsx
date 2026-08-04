@@ -14,6 +14,7 @@ import { ProductDetail } from "../pages/ProductDetail";
 import { MyOrders } from "../pages/MyOrders";
 import { OrderDetail } from "../pages/OrderDetail";
 import { Wishlist } from "../pages/Wishlist";
+import { Profile } from "../pages/Profile";
 import { VerifyEmail } from "../pages/VerifyEmail";
 import { Terms } from "../pages/Terms";
 import { Privacy } from "../pages/Privacy";
@@ -33,13 +34,14 @@ export const AppRoutes: React.FC = () => {
 				<Route path="/privacy" element={<Privacy />} />
 				<Route path="/product/:id" element={<ProductDetail />} />
 
-				{/* Protected User Routes */}
-				<Route element={<ProtectedRoute allowedRoles={["user", "admin"]} />}>
-					<Route path="/cart" element={<Cart />} />
-					<Route path="/orders" element={<MyOrders />} />
-					<Route path="/orders/:id" element={<OrderDetail />} />
-					<Route path="/wishlist" element={<Wishlist />} />
-				</Route>
+			{/* Protected User Routes */}
+			<Route element={<ProtectedRoute allowedRoles={["user", "admin"]} />}>
+				<Route path="/cart" element={<Cart />} />
+				<Route path="/orders" element={<MyOrders />} />
+				<Route path="/orders/:id" element={<OrderDetail />} />
+				<Route path="/wishlist" element={<Wishlist />} />
+				<Route path="/profile" element={<Profile />} />
+			</Route>
 
 				{/* Protected Admin Routes */}
 				<Route element={<ProtectedRoute allowedRoles={["admin"]} />}>

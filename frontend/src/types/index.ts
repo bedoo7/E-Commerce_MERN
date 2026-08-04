@@ -7,6 +7,8 @@ export interface IUser {
 	isActive?: boolean;
 	createdAt?: string;
 	updatedAt?: string;
+	phone?: string;
+	address?: string;
 }
 
 export interface IProduct {
@@ -20,6 +22,8 @@ export interface IProduct {
 	imageUrl: string;
 	createdAt?: string;
 	updatedAt?: string;
+	averageRating?: number;
+	totalReviews?: number;
 }
 
 export interface ICartItem {
@@ -63,6 +67,7 @@ export interface IOrder {
 	couponCode?: string;
 	couponPercent?: number;
 	address: string;
+	phone?: string;
 	status: OrderStatus;
 	cancelledAt?: string;
 	cancelledBy?: string;

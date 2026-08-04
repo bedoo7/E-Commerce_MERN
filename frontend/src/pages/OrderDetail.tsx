@@ -364,6 +364,16 @@ export const OrderDetail: React.FC = () => {
 									{order.address}
 								</Typography>
 							</Box>
+							{order.phone && (
+								<Box>
+									<Typography variant="subtitle2" fontWeight={700} gutterBottom>
+										Phone Number
+									</Typography>
+									<Typography variant="body2" color="text.secondary">
+										{order.phone}
+									</Typography>
+								</Box>
+							)}
 							<Divider sx={{ my: 2 }} />
 							<Stack direction="row" spacing={1} alignItems="center">
 								<LocalShippingIcon color="primary" fontSize="small" />

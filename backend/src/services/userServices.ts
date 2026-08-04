@@ -171,6 +171,46 @@ export const verifyEmail = async (token: string) => {
 };
 
 // Get the authenticated user's profile
+export const getProfile = async (userId: string) => {
+	try {
+		const user = await userModel.findById(userId).select("-password");
+		if (!user) {
+			throw new Error("User not found");
+		}
+		return user;
+	} catch (error: any) {
+		throw new Error(error.message);
+	}
+};
+
+// Update user profile (own data only)
+export const updateProfile = async (
+	userId: string,
+	updateData: {
+		firstName?: string;
+		lastName?: string;
+		email?: string;
+		phone?: string;
+		address?: string;
+	},
+) => {
+	try {
+		const user = await userModel
+			.findByIdAndUpdate(userId, updateData, {
+				new: true,
+				runValidators: true,
+			})
+			.select("-password");
+		if (!user) {
+			throw new Error("User not found");
+		}
+		return user;
+	} catch (error: any) {
+		throw new Error(error.message);
+	}
+};
+
+// Get me by token (legacy, used by AuthContext)
 export const getmebytoken = async (userId: string) => {
 	try {
 		const user = await userModel.findById(userId).select("-password");

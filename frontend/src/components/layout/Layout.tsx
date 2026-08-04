@@ -1,18 +1,18 @@
 import React, { useState } from "react";
 import {
 	AppBar,
-	Toolbar,
-	Typography,
-	Button,
-	IconButton,
-	Box,
+	Avatar,
 	Badge,
+	Box,
+	Button,
 	Container,
+	Divider,
+	IconButton,
 	Menu,
 	MenuItem,
-	Avatar,
-	Divider,
+	Toolbar,
 	Tooltip,
+	Typography,
 } from "@mui/material";
 import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
@@ -29,9 +29,15 @@ import { useColorMode } from "../../context/ColorModeContext";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/axios";
 import { ICart } from "../../types";
-import { luxeFadeIn, luxeIconButton, luxeNavLinkActive } from "../../theme/luxeStyles";
+import {
+	luxeFadeIn,
+	luxeIconButton,
+	luxeNavLinkActive,
+} from "../../theme/luxeStyles";
 
-export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const Layout: React.FC<{ children: React.ReactNode }> = ({
+	children,
+}) => {
 	const { user, logout, isAuthenticated } = useAuth();
 	const { mode, toggleColorMode } = useColorMode();
 	const location = useLocation();
@@ -86,7 +92,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 				}}
 			>
 				<Container maxWidth="xl">
-					<Toolbar disableGutters sx={{ minHeight: { xs: 64, md: 72 }, gap: 1 }}>
+					<Toolbar
+						disableGutters
+						sx={{ minHeight: { xs: 64, md: 72 }, gap: 1 }}
+					>
 						<Box
 							component={Link}
 							to="/"
@@ -220,9 +229,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 												fontWeight: 700,
 											}}
 										>
-											{user?.firstName
-												? user.firstName[0].toUpperCase()
-												: "U"}
+											{user?.firstName ? user.firstName[0].toUpperCase() : "U"}
 										</Avatar>
 									</IconButton>
 									<Menu
@@ -255,12 +262,26 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 												onClick={handleMenuClose}
 												sx={{ borderRadius: 2, gap: 1.5, my: 0.5 }}
 											>
-												<DashboardOutlinedIcon fontSize="small" color="primary" />
+												<DashboardOutlinedIcon
+													fontSize="small"
+													color="primary"
+												/>
 												<Typography variant="body2" fontWeight={600}>
 													Admin Dashboard
 												</Typography>
 											</MenuItem>
 										)}
+										<MenuItem
+											component={Link}
+											to="/profile"
+											onClick={handleMenuClose}
+											sx={{ borderRadius: 2, gap: 1.5, my: 0.5 }}
+										>
+											<PersonOutlineIcon fontSize="small" color="primary" />
+											<Typography variant="body2" fontWeight={600}>
+												My Profile
+											</Typography>
+										</MenuItem>
 										<MenuItem
 											component={Link}
 											to="/wishlist"
@@ -276,7 +297,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 											onClick={handleMenuClose}
 											sx={{ borderRadius: 2, gap: 1.5, my: 0.5 }}
 										>
-											<ShoppingBagOutlinedIcon fontSize="small" color="action" />
+											<ShoppingBagOutlinedIcon
+												fontSize="small"
+												color="action"
+											/>
 											<Typography variant="body2">My Cart</Typography>
 										</MenuItem>
 										<MenuItem
@@ -395,11 +419,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 								>
 									<StorefrontIcon fontSize="small" />
 								</Box>
-								<Typography variant="h6" fontWeight={800} letterSpacing="-0.02em">
+								<Typography
+									variant="h6"
+									fontWeight={800}
+									letterSpacing="-0.02em"
+								>
 									LUXE STORE
 								</Typography>
 							</Box>
-							<Typography variant="body2" color="text.secondary" lineHeight={1.7}>
+							<Typography
+								variant="body2"
+								color="text.secondary"
+								lineHeight={1.7}
+							>
 								Your premier destination for high-end electronics, gadgets, and
 								tech accessories with seamless fast delivery.
 							</Typography>
@@ -499,8 +531,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 					</Box>
 					<Divider sx={{ my: 4, borderColor: "divider" }} />
 					<Typography variant="body2" color="text.secondary" textAlign="center">
-						&copy; {new Date().getFullYear()} Luxe Store. Engineered with React,
-						Node.js & MongoDB. All rights reserved.
+						&copy; {new Date().getFullYear()} Luxe Store. Designed & Developed
+						by Abdelrahman Hassan.
 					</Typography>
 				</Container>
 			</Box>

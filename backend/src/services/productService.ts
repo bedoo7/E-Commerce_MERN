@@ -1,5 +1,6 @@
 import { productModel, IProduct } from "../models/productModel";
 import { wishlistModel } from "../models/wishlistModel";
+import { reviewModel } from "../models/reviewModel";
 import { normalizeName } from "./brandService";
 import {
 	buildPaginatedResponse,
@@ -21,9 +22,14 @@ export interface ProductQueryParams {
 	sortOrder?: string;
 }
 
+export interface ProductWithRating extends IProduct {
+	averageRating: number;
+	totalReviews: number;
+}
+
 export const getAllProducts = async (
 	queryParams: ProductQueryParams = {},
-): Promise<PaginatedResponse<IProduct>> => {
+): Promise<PaginatedResponse<ProductWithRating>> => {
 	const { page, limit, skip, sortBy, sortOrder } =
 		parsePaginationParams(queryParams);
 
@@ -75,16 +81,38 @@ export const getAllProducts = async (
 
 	const [products, totalItems] = await Promise.all([
 		productModel
-			.find(filter)
-			.sort({ [sortField]: sortOrder })
-			.skip(skip)
-			.limit(limit)
-			.lean(),
+			.aggregate<IProduct & { averageRating: number; totalReviews: number }>([
+				{ $match: filter },
+				{ $sort: { [sortField]: sortOrder } },
+				{ $skip: skip },
+				{ $limit: limit },
+				{
+					$lookup: {
+						from: "reviews",
+						localField: "_id",
+						foreignField: "productId",
+						as: "reviews",
+					},
+				},
+				{
+					$addFields: {
+						averageRating: {
+							$cond: {
+								if: { $gt: [{ $size: "$reviews" }, 0] },
+								then: { $avg: "$reviews.rating" },
+								else: 0,
+							},
+						},
+						totalReviews: { $size: "$reviews" },
+					},
+				},
+				{ $project: { reviews: 0 } },
+			]),
 		productModel.countDocuments(filter),
 	]);
 
 	return buildPaginatedResponse(
-		products as IProduct[],
+		products,
 		totalItems,
 		page,
 		limit,

@@ -71,9 +71,9 @@ router.delete("/clear", authenticate, async (req: any, res: Response) => {
 
 router.post("/checkout", authenticate, async (req: any, res: Response) => {
 	try {
-	const userId = req.user.id;
-	const { address, couponCode } = req.body;
-	const response = await checkout({ userId, address, couponCode });
+		const userId = req.user.id;
+		const { address, phone, couponCode } = req.body;
+		const response = await checkout({ userId, address, phone, couponCode });
 		res.status(200).json(response);
 	} catch (error) {
 		res.status(500).json({ message: "Error during checkout", error });

@@ -31,6 +31,7 @@ export interface IOrder extends Document {
 	couponCode?: string;
 	couponPercent?: number;
 	address: string;
+	phone: string;
 	status: OrderStatus;
 	cancelledAt?: Date;
 	cancelledBy?: ObjectId | string;
@@ -50,6 +51,7 @@ const orderSchema = new Schema<IOrder>(
 		couponCode: { type: String, default: undefined },
 		couponPercent: { type: Number, default: undefined },
 		address: { type: String, required: true },
+		phone: { type: String, required: true },
 		status: {
 			type: String,
 			enum: ["pending", "processing", "shipped", "delivered", "cancelled"],

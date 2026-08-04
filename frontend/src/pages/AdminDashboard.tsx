@@ -40,6 +40,7 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import PeopleIcon from "@mui/icons-material/People";
@@ -236,6 +237,8 @@ export const AdminDashboard: React.FC = () => {
 	const [statusDialogOpen, setStatusDialogOpen] = useState(false);
 	const [selectedOrder, setSelectedOrder] = useState<IOrder | null>(null);
 	const [newStatus, setNewStatus] = useState<OrderStatus>("pending");
+	const [viewDialogOpen, setViewDialogOpen] = useState(false);
+	const [viewingOrder, setViewingOrder] = useState<IOrder | null>(null);
 
 	// User management state
 	const [userDialogOpen, setUserDialogOpen] = useState(false);
@@ -879,6 +882,11 @@ export const AdminDashboard: React.FC = () => {
 		setSelectedOrder(order);
 		setNewStatus(order.status || "pending");
 		setStatusDialogOpen(true);
+	};
+
+	const handleViewOrder = (order: IOrder) => {
+		setViewingOrder(order);
+		setViewDialogOpen(true);
 	};
 
 	const orders = ordersData?.data ?? [];
@@ -2605,24 +2613,35 @@ export const AdminDashboard: React.FC = () => {
 															{new Date(order.createdAt!).toLocaleDateString()}
 														</TableCell>
 														<TableCell>
-															<Tooltip
-																title={
-																	order.status === "cancelled"
-																		? "Cancelled orders cannot be modified"
-																		: ""
-																}
-															>
-																<span>
-																	<Button
+															<Stack direction="row" spacing={1}>
+																<Tooltip title="View order details">
+																	<IconButton
 																		size="small"
-																		variant="outlined"
-																		onClick={() => handleOpenStatus(order)}
-																		disabled={order.status === "cancelled"}
+																		color="primary"
+																		onClick={() => handleViewOrder(order)}
 																	>
-																		Update
-																	</Button>
-																</span>
-															</Tooltip>
+																		<VisibilityIcon fontSize="small" />
+																	</IconButton>
+																</Tooltip>
+																<Tooltip
+																	title={
+																		order.status === "cancelled"
+																			? "Cancelled orders cannot be modified"
+																			: "Update order status"
+																	}
+																>
+																	<span>
+																		<Button
+																			size="small"
+																			variant="outlined"
+																			onClick={() => handleOpenStatus(order)}
+																			disabled={order.status === "cancelled"}
+																		>
+																			Update
+																		</Button>
+																	</span>
+																</Tooltip>
+															</Stack>
 														</TableCell>
 													</TableRow>
 												);
@@ -3373,6 +3392,101 @@ export const AdminDashboard: React.FC = () => {
 						disabled={updateStatusMutation.isPending}
 					>
 						{updateStatusMutation.isPending ? "Updating..." : "Update"}
+					</Button>
+				</DialogActions>
+			</Dialog>
+
+			{/* View Order Dialog */}
+			<Dialog
+				open={viewDialogOpen}
+				onClose={() => setViewDialogOpen(false)}
+				fullWidth
+				maxWidth="md"
+				PaperProps={{ sx: luxeDialogPaper }}
+			>
+				<DialogTitle fontWeight={800} letterSpacing="-0.02em">
+					Order #{viewingOrder?.orderNumber}
+				</DialogTitle>
+				<DialogContent>
+					{viewingOrder && (
+						<Stack spacing={3} mt={1}>
+							<Box>
+								<Typography variant="subtitle2" color="text.secondary" gutterBottom>
+									Customer
+								</Typography>
+								<Typography variant="body1" fontWeight={600}>
+									{typeof viewingOrder.userId === "object"
+										? `${viewingOrder.userId.firstName} ${viewingOrder.userId.lastName}`
+										: "Unknown User"}
+								</Typography>
+								{typeof viewingOrder.userId === "object" && (
+									<Typography variant="body2" color="text.secondary">
+										{viewingOrder.userId.email}
+									</Typography>
+								)}
+							</Box>
+							<Box>
+								<Typography variant="subtitle2" color="text.secondary" gutterBottom>
+									Shipping Address
+								</Typography>
+								<Typography variant="body1">{viewingOrder.address}</Typography>
+							</Box>
+							{viewingOrder.phone && (
+								<Box>
+									<Typography variant="subtitle2" color="text.secondary" gutterBottom>
+										Phone Number
+									</Typography>
+									<Typography variant="body1">{viewingOrder.phone}</Typography>
+								</Box>
+							)}
+							<Box>
+								<Typography variant="subtitle2" color="text.secondary" gutterBottom>
+									Order Items
+								</Typography>
+								<TableContainer component={Paper} sx={{ ...luxeTableContainer }}>
+									<Table size="small">
+										<TableHead sx={{ bgcolor: "action.hover" }}>
+											<TableRow>
+												<TableCell sx={{ fontWeight: 700 }}>Product</TableCell>
+												<TableCell sx={{ fontWeight: 700 }}>Qty</TableCell>
+												<TableCell sx={{ fontWeight: 700 }}>Price</TableCell>
+												<TableCell sx={{ fontWeight: 700 }}>Subtotal</TableCell>
+											</TableRow>
+										</TableHead>
+										<TableBody>
+											{viewingOrder.orderItems.map((item, idx) => (
+												<TableRow key={idx}>
+													<TableCell>{item.productTitle}</TableCell>
+													<TableCell>{item.quantity}</TableCell>
+													<TableCell>${item.unitPrice}</TableCell>
+													<TableCell>
+														<Typography fontWeight={700}>
+															${item.unitPrice * item.quantity}
+														</Typography>
+													</TableCell>
+												</TableRow>
+											))}
+										</TableBody>
+									</Table>
+								</TableContainer>
+							</Box>
+							<Box display="flex" justifyContent="space-between" alignItems="center">
+								<Typography variant="body2" color="text.secondary">
+									Total: <strong>${viewingOrder.totalAmount}</strong>
+								</Typography>
+								<Chip
+									label={(viewingOrder.status || "pending").toUpperCase()}
+									color={statusColors[viewingOrder.status || "pending"]}
+									size="small"
+									sx={{ fontWeight: 700 }}
+								/>
+							</Box>
+						</Stack>
+					)}
+				</DialogContent>
+				<DialogActions sx={{ p: 3 }}>
+					<Button onClick={() => setViewDialogOpen(false)} color="inherit">
+						Close
 					</Button>
 				</DialogActions>
 			</Dialog>

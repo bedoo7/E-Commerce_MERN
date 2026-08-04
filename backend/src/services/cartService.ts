@@ -219,12 +219,17 @@ export const deleteItemFromCart = async ({
 interface Checkout {
 	userId: string;
 	address: string;
+	phone: string;
 	couponCode?: string;
 }
-export const checkout = async ({ userId, address, couponCode }: Checkout) => {
+export const checkout = async ({ userId, address, phone, couponCode }: Checkout) => {
 	try {
 		if (!address) {
 			throw new Error("Shipping address is required for checkout");
+		}
+
+		if (!phone) {
+			throw new Error("Phone number is required for checkout");
 		}
 
 		const cart = await getActiveCartForUser({ userId });
@@ -306,6 +311,7 @@ export const checkout = async ({ userId, address, couponCode }: Checkout) => {
 			couponCode: couponCode ? couponCode.toUpperCase() : undefined,
 			couponPercent,
 			address,
+			phone,
 		});
 
 		// Update coupon usage only after successful order creation

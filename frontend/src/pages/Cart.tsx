@@ -18,6 +18,12 @@ import {
 	CircularProgress,
 	Stack,
 	Paper,
+	RadioGroup,
+	FormControlLabel,
+	Radio,
+	Checkbox,
+	FormControl,
+	FormLabel,
 } from "@mui/material";
 import Add from "@mui/icons-material/Add";
 import Remove from "@mui/icons-material/Remove";
@@ -25,7 +31,8 @@ import Delete from "@mui/icons-material/Delete";
 import ShoppingBag from "@mui/icons-material/ShoppingBag";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { api } from "../api/axios";
-import { ICart, IProduct, IOrder } from "../types";
+import { ICart, IProduct, IOrder, IUser } from "../types";
+import { useAuth } from "../context/AuthContext";
 import {
 	luxeSurface,
 	luxeStickySummary,
@@ -45,8 +52,14 @@ type CouponValidationResponse = {
 export const Cart: React.FC = () => {
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
+	const { isAuthenticated, user } = useAuth();
 	const [checkoutOpen, setCheckoutOpen] = useState(false);
 	const [address, setAddress] = useState("");
+	const [phone, setPhone] = useState("");
+	const [useSavedAddress, setUseSavedAddress] = useState(!!user?.address);
+	const [useSavedPhone, setUseSavedPhone] = useState(!!user?.phone);
+	const [saveAsDefaultAddress, setSaveAsDefaultAddress] = useState(false);
+	const [saveAsDefaultPhone, setSaveAsDefaultPhone] = useState(false);
 	const [couponCode, setCouponCode] = useState("");
 	const [couponApplied, setCouponApplied] = useState<{
 		code: string;
@@ -55,7 +68,25 @@ export const Cart: React.FC = () => {
 	} | null>(null);
 	const [successOrder, setSuccessOrder] = useState<IOrder | null>(null);
 
-	// Fetch active cart
+	const { data: profile } = useQuery({
+		queryKey: ["profile"],
+		queryFn: async () => {
+			const res = await api.get("/user/profile");
+			return res.data as IUser;
+		},
+		enabled: isAuthenticated,
+	});
+
+	React.useEffect(() => {
+		if (profile) {
+			if (profile.address && useSavedAddress) {
+				setAddress(profile.address);
+			}
+			if (profile.phone && useSavedPhone) {
+				setPhone(profile.phone);
+			}
+		}
+	}, [profile]);
 	const { data: cart, isLoading } = useQuery<ICart>({
 		queryKey: ["cart"],
 		queryFn: async () => {
@@ -138,7 +169,7 @@ export const Cart: React.FC = () => {
 
 	// Checkout mutation
 	const checkoutMutation = useMutation({
-		mutationFn: async (payload: { address: string; couponCode?: string }) => {
+		mutationFn: async (payload: { address: string; phone: string; couponCode?: string }) => {
 			const res = await api.post("/cart/checkout", payload);
 			return res.data;
 		},
@@ -147,10 +178,25 @@ export const Cart: React.FC = () => {
 			setSuccessOrder(data);
 			setCheckoutOpen(false);
 			setAddress("");
+			setPhone("");
 			toast.success("Order placed successfully!");
 		},
 		onError: (err: any) => {
 			toast.error(err.message || "Checkout failed");
+		},
+	});
+
+	const saveProfileMutation = useMutation({
+		mutationFn: async (data: { address?: string; phone?: string }) => {
+			const res = await api.put("/user/profile", data);
+			return res.data;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["profile"] });
+			toast.success("Default info saved to profile");
+		},
+		onError: (err: any) => {
+			toast.error(err.message || "Failed to save profile");
 		},
 	});
 
@@ -180,10 +226,22 @@ export const Cart: React.FC = () => {
 			toast.error("Address is required");
 			return;
 		}
+		if (!phone.trim()) {
+			toast.error("Phone number is required");
+			return;
+		}
 		checkoutMutation.mutate({
 			address,
+			phone,
 			couponCode: couponApplied?.code,
 		});
+
+		if (saveAsDefaultAddress) {
+			saveProfileMutation.mutate({ address });
+		}
+		if (saveAsDefaultPhone) {
+			saveProfileMutation.mutate({ phone });
+		}
 	};
 
 	const subtotal = cart?.totalAmount ?? 0;
@@ -650,24 +708,167 @@ export const Cart: React.FC = () => {
 			>
 				<DialogTitle>Complete Your Checkout</DialogTitle>
 				<DialogContent>
-					<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-						Enter the delivery address for your order.
-					</Typography>
-					<TextField
-						fullWidth
-						label="Delivery Address"
-						multiline
-						minRows={3}
-						value={address}
-						onChange={(e) => setAddress(e.target.value)}
-					/>
+					<Stack spacing={3}>
+						{/* Address Section */}
+						<Box>
+							<Typography variant="subtitle2" fontWeight={600} gutterBottom>
+								Shipping Address
+							</Typography>
+							<RadioGroup
+								value={useSavedAddress ? "saved" : "new"}
+								onChange={(e) => {
+									const selected = e.target.value;
+									setUseSavedAddress(selected === "saved");
+									if (selected === "saved" && profile?.address) {
+										setAddress(profile.address);
+									} else if (selected === "new") {
+										setAddress("");
+									}
+								}}
+							>
+								{profile?.address && (
+									<FormControlLabel
+										value="saved"
+										control={<Radio size="small" />}
+										label={
+											<Box>
+												<Typography variant="body2" fontWeight={600}>
+													Use default address
+												</Typography>
+												<Typography variant="caption" color="text.secondary">
+													{profile.address}
+												</Typography>
+											</Box>
+										}
+										sx={{ mb: 1 }}
+									/>
+								)}
+								<FormControlLabel
+									value="new"
+									control={<Radio size="small" />}
+									label={
+										<Typography variant="body2" fontWeight={600}>
+											{profile?.address ? "Use a new address" : "Enter delivery address"}
+										</Typography>
+									}
+									sx={{ mb: 1 }}
+								/>
+							</RadioGroup>
+							{!useSavedAddress && (
+								<>
+									<TextField
+										fullWidth
+										label="Delivery Address"
+										multiline
+										minRows={3}
+										value={address}
+										onChange={(e) => setAddress(e.target.value)}
+										sx={{ mt: 1 }}
+									/>
+									<FormControlLabel
+										control={
+											<Checkbox
+												size="small"
+												checked={saveAsDefaultAddress}
+												onChange={(e) => setSaveAsDefaultAddress(e.target.checked)}
+											/>
+										}
+										label={
+											<Typography variant="caption" color="text.secondary">
+												Save as my default address
+											</Typography>
+										}
+										sx={{ mt: 0.5 }}
+									/>
+								</>
+							)}
+						</Box>
+
+						{/* Phone Section */}
+						<Box>
+							<Typography variant="subtitle2" fontWeight={600} gutterBottom>
+								Phone Number
+							</Typography>
+							<RadioGroup
+								value={useSavedPhone ? "saved" : "new"}
+								onChange={(e) => {
+									const selected = e.target.value;
+									setUseSavedPhone(selected === "saved");
+									if (selected === "saved" && profile?.phone) {
+										setPhone(profile.phone);
+									} else if (selected === "new") {
+										setPhone("");
+									}
+								}}
+							>
+								{profile?.phone && (
+									<FormControlLabel
+										value="saved"
+										control={<Radio size="small" />}
+										label={
+											<Box>
+												<Typography variant="body2" fontWeight={600}>
+													Use default phone
+												</Typography>
+												<Typography variant="caption" color="text.secondary">
+													{profile.phone}
+												</Typography>
+											</Box>
+										}
+										sx={{ mb: 1 }}
+									/>
+								)}
+								<FormControlLabel
+									value="new"
+									control={<Radio size="small" />}
+									label={
+										<Typography variant="body2" fontWeight={600}>
+											{profile?.phone ? "Use a new phone number" : "Enter phone number"}
+										</Typography>
+									}
+									sx={{ mb: 1 }}
+								/>
+							</RadioGroup>
+							{!useSavedPhone && (
+								<>
+									<TextField
+										fullWidth
+										label="Phone Number"
+										value={phone}
+										onChange={(e) => setPhone(e.target.value)}
+										placeholder="+1 234 567 8900"
+										sx={{ mt: 1 }}
+									/>
+									<FormControlLabel
+										control={
+											<Checkbox
+												size="small"
+												checked={saveAsDefaultPhone}
+												onChange={(e) => setSaveAsDefaultPhone(e.target.checked)}
+											/>
+										}
+										label={
+											<Typography variant="caption" color="text.secondary">
+												Save as my default phone number
+											</Typography>
+										}
+										sx={{ mt: 0.5 }}
+									/>
+								</>
+							)}
+						</Box>
+					</Stack>
 				</DialogContent>
 				<DialogActions sx={{ px: 3, pb: 2 }}>
 					<Button onClick={() => setCheckoutOpen(false)}>Cancel</Button>
 					<Button
 						variant="contained"
 						onClick={handleCheckoutSubmit}
-						disabled={checkoutMutation.isPending || !address.trim()}
+						disabled={
+							checkoutMutation.isPending ||
+							!address.trim() ||
+							!phone.trim()
+						}
 					>
 						{checkoutMutation.isPending ? "Placing Order..." : "Place Order"}
 					</Button>

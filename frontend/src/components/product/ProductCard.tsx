@@ -37,6 +37,7 @@ interface ProductCardProps {
 	inWishlist?: boolean;
 	/** Optional display rating (e.g. from review aggregates) */
 	averageRating?: number;
+	totalReviews?: number;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -49,6 +50,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 	isUpdatePending,
 	inWishlist,
 	averageRating,
+	totalReviews,
 }) => {
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
@@ -179,16 +181,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 							"https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80";
 					}}
 				/>
-				<Stack
-					direction="row"
-					spacing={0.75}
-					sx={{
-						position: "absolute",
-						top: 14,
-						left: 14,
-						zIndex: 1,
-					}}
-				>
+			<Stack
+				direction="row"
+				spacing={0.75}
+				sx={{
+					position: "absolute",
+					top: "10px",
+					left: "24px",
+					zIndex: 1,
+				}}
+			>
 					<Chip
 						label={product.brand}
 						size="small"
@@ -221,8 +223,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 					onClick={handleWishlistClick}
 					sx={{
 						position: "absolute",
-						top: 12,
-						right: 12,
+						top: "10px",
+						right: "24px",
 						zIndex: 1,
 						bgcolor: "rgba(255,255,255,0.92)",
 						backdropFilter: "blur(8px)",
@@ -236,9 +238,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 					}}
 					size="small"
 					disabled={toggleWishlistMutation.isPending}
-					aria-label={
-						inWishlist ? "Remove from wishlist" : "Add to wishlist"
-					}
+					aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
 				>
 					{inWishlist ? (
 						<FavoriteIcon sx={{ color: "#ef4444", fontSize: 20 }} />
@@ -299,17 +299,31 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 				</Typography>
 
 				{averageRating !== undefined && averageRating > 0 && (
-					<Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 1 }}>
+					<Stack
+						direction="row"
+						alignItems="center"
+						spacing={0.5}
+						sx={{ mb: 1 }}
+					>
 						<Rating
 							value={averageRating}
 							precision={0.1}
-						 readOnly
-						 size="small"
-						 sx={{ fontSize: "1rem" }}
+							readOnly
+							size="small"
+							sx={{ fontSize: "1rem" }}
 						/>
-						<Typography variant="caption" color="text.secondary" fontWeight={600}>
+						<Typography
+							variant="caption"
+							color="text.secondary"
+							fontWeight={600}
+						>
 							{averageRating.toFixed(1)}
 						</Typography>
+						{totalReviews !== undefined && totalReviews > 0 && (
+							<Typography variant="caption" color="text.secondary">
+								({totalReviews})
+							</Typography>
+						)}
 					</Stack>
 				)}
 
