@@ -42,10 +42,28 @@ const orderItemSchema = new mongoose_1.Schema({
     quantity: { type: Number, required: true, default: 1 },
 });
 const orderSchema = new mongoose_1.Schema({
+    orderNumber: { type: String, unique: true, sparse: true },
     userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
     orderItems: [orderItemSchema],
     totalAmount: { type: Number, required: true, default: 0 },
+    subtotal: { type: Number, default: 0 },
+    discount: { type: Number, default: 0 },
+    couponCode: { type: String, default: undefined },
+    couponPercent: { type: Number, default: undefined },
     address: { type: String, required: true },
+    phone: { type: String, required: true },
+    status: {
+        type: String,
+        enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+        default: "pending",
+    },
+    cancelledAt: { type: Date, default: undefined },
+    cancelledBy: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "User",
+        default: undefined,
+    },
+    cancelReason: { type: String, default: undefined },
 }, {
     timestamps: true,
 });

@@ -1,9 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.generateVerificationEmailHTML = exports.generatePasswordResetEmailHTML = void 0;
 /**
  * Generate the logo HTML block.
  * Clean text-only "LUXE STORE" wordmark for maximum email client compatibility.
  */
-const defaultLogoHtml = (): string => {
-	return `
+const defaultLogoHtml = () => {
+    return `
 		<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
 			<tr>
 				<td align="center" style="text-align:center;">
@@ -20,12 +23,9 @@ const defaultLogoHtml = (): string => {
 		</table>
 	`;
 };
-
-export const generatePasswordResetEmailHTML = (
-	resetUrl: string,
-): string => {
-	const logo = defaultLogoHtml();
-	return `
+const generatePasswordResetEmailHTML = (resetUrl) => {
+    const logo = defaultLogoHtml();
+    return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -185,12 +185,10 @@ export const generatePasswordResetEmailHTML = (
 </body>
 </html>`;
 };
-
-export const generateVerificationEmailHTML = (
-	verificationUrl: string,
-): string => {
-	const logo = defaultLogoHtml();
-	return `
+exports.generatePasswordResetEmailHTML = generatePasswordResetEmailHTML;
+const generateVerificationEmailHTML = (verificationUrl) => {
+    const logo = defaultLogoHtml();
+    return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -351,3 +349,4 @@ export const generateVerificationEmailHTML = (
 </body>
 </html>`;
 };
+exports.generateVerificationEmailHTML = generateVerificationEmailHTML;

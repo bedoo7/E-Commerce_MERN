@@ -60,7 +60,19 @@ export const registerUser = async ({
 	try {
 		const existingUser = await userModel.findOne({ email });
 		if (existingUser) {
-			throw new Error("User with this email already exists");
+			if (existingUser.isVerified) {
+				throw new Error("User with this email already exists");
+			}
+			const verificationToken = crypto.randomBytes(32).toString("hex");
+			existingUser.verificationToken = verificationToken;
+			await existingUser.save();
+			const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+			const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
+			await sendVerificationEmail(email, verificationUrl);
+			return {
+				message:
+					"A new verification email has been sent. Please check your inbox.",
+			};
 		}
 
 		if (password !== confirmPassword) {

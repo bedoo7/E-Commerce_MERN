@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Typography, Button, Paper } from "@mui/material";
+import { Box, Typography, Button } from "@mui/material";
 import SearchOff from "@mui/icons-material/SearchOff";
 import { luxeFadeIn, luxeSurface } from "../../theme/luxeStyles";
 
@@ -21,8 +21,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 	onAction,
 }) => {
 	return (
-		<Paper
-			elevation={0}
+		<Box
 			sx={{
 				...luxeFadeIn,
 				...luxeSurface,
@@ -30,7 +29,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 				textAlign: "center",
 				my: 4,
 				borderStyle: "dashed",
-			}}
+			} as any}
 		>
 			<Box
 				mb={2.5}
@@ -79,6 +78,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 					{actionText}
 				</Button>
 			)}
-		</Paper>
+		</Box>
 	);
 };

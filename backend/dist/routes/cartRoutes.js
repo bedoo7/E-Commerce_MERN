@@ -63,8 +63,8 @@ router.delete("/clear", auth_middleware_1.authenticate, async (req, res) => {
 router.post("/checkout", auth_middleware_1.authenticate, async (req, res) => {
     try {
         const userId = req.user.id;
-        const { address } = req.body;
-        const response = await (0, cartService_1.checkout)({ userId, address });
+        const { address, phone, couponCode } = req.body;
+        const response = await (0, cartService_1.checkout)({ userId, address, phone, couponCode });
         res.status(200).json(response);
     }
     catch (error) {

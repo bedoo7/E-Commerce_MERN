@@ -33,22 +33,19 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.userModel = void 0;
+exports.wishlistModel = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
-const userSchema = new mongoose_1.Schema({
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    role: { type: String, enum: ["user", "admin"], default: "user" },
-    isActive: { type: Boolean, default: true },
-    isVerified: { type: Boolean, default: false },
-    phone: { type: String },
-    address: { type: String },
-    verificationToken: { type: String },
-    resetPasswordToken: { type: String },
-    resetPasswordExpires: { type: Date },
-}, {
-    timestamps: true,
+const wishlistItemSchema = new mongoose_1.Schema({
+    product: { type: mongoose_1.Schema.Types.ObjectId, ref: "Product", required: true },
+    addedAt: { type: Date, default: Date.now },
 });
-exports.userModel = mongoose_1.default.model("User", userSchema);
+const wishlistSchema = new mongoose_1.Schema({
+    userId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+        unique: true,
+    },
+    items: [wishlistItemSchema],
+}, { timestamps: true });
+exports.wishlistModel = mongoose_1.default.model("Wishlist", wishlistSchema);

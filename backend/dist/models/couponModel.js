@@ -33,22 +33,60 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.userModel = void 0;
+exports.couponModel = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
-const userSchema = new mongoose_1.Schema({
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    role: { type: String, enum: ["user", "admin"], default: "user" },
-    isActive: { type: Boolean, default: true },
-    isVerified: { type: Boolean, default: false },
-    phone: { type: String },
-    address: { type: String },
-    verificationToken: { type: String },
-    resetPasswordToken: { type: String },
-    resetPasswordExpires: { type: Date },
-}, {
-    timestamps: true,
-});
-exports.userModel = mongoose_1.default.model("User", userSchema);
+const couponSchema = new mongoose_1.Schema({
+    code: {
+        type: String,
+        required: true,
+        unique: true,
+        uppercase: true,
+        trim: true,
+    },
+    discountType: {
+        type: String,
+        enum: ["percentage", "fixed"],
+        default: "percentage",
+    },
+    discountPercent: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 100,
+    },
+    discountValue: {
+        type: Number,
+        default: 0,
+        min: 0,
+    },
+    minOrderAmount: {
+        type: Number,
+        default: 0,
+    },
+    expiresAt: {
+        type: Date,
+        required: true,
+    },
+    usageLimit: {
+        type: Number,
+        default: 0,
+    },
+    usedCount: {
+        type: Number,
+        default: 0,
+    },
+    usedBy: {
+        type: [
+            {
+                userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User" },
+                count: { type: Number, default: 0 },
+            },
+        ],
+        default: [],
+    },
+    isActive: {
+        type: Boolean,
+        default: true,
+    },
+}, { timestamps: true });
+exports.couponModel = mongoose_1.default.model("Coupon", couponSchema);

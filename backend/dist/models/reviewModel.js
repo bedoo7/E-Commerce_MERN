@@ -33,22 +33,37 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.userModel = void 0;
+exports.reviewModel = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
-const userSchema = new mongoose_1.Schema({
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    role: { type: String, enum: ["user", "admin"], default: "user" },
-    isActive: { type: Boolean, default: true },
-    isVerified: { type: Boolean, default: false },
-    phone: { type: String },
-    address: { type: String },
-    verificationToken: { type: String },
-    resetPasswordToken: { type: String },
-    resetPasswordExpires: { type: Date },
-}, {
-    timestamps: true,
-});
-exports.userModel = mongoose_1.default.model("User", userSchema);
+const reviewSchema = new mongoose_1.Schema({
+    productId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "Product",
+        required: true,
+        index: true,
+    },
+    userId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+    },
+    rating: {
+        type: Number,
+        required: true,
+        min: 1,
+        max: 5,
+    },
+    comment: {
+        type: String,
+        required: true,
+        maxlength: 1000,
+    },
+    isVerifiedPurchase: {
+        type: Boolean,
+        default: false,
+    },
+}, { timestamps: true });
+// Ensure one review per user per product
+reviewSchema.index({ productId: 1, userId: 1 }, { unique: true });
+reviewSchema.index({ productId: 1, rating: -1 });
+exports.reviewModel = mongoose_1.default.model("Review", reviewSchema);

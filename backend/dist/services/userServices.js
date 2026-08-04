@@ -3,26 +3,69 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllUsers = exports.getmebytoken = exports.loginUser = exports.registerUser = void 0;
+exports.getAllUsers = exports.toggleUserActive = exports.deleteUser = exports.updateUser = exports.getmebytoken = exports.updateProfile = exports.getProfile = exports.verifyEmail = exports.loginUser = exports.registerUser = void 0;
 const userModel_1 = require("../models/userModel");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const crypto_1 = __importDefault(require("crypto"));
 const pagination_1 = require("../utils/pagination");
-const registerUser = async ({ firstName, lastName, email, password, role, }) => {
+const emailService_1 = require("../utils/emailService");
+const validatePasswordStrength = (password) => {
+    if (password.length < 8) {
+        return "Password must be at least 8 characters";
+    }
+    if (!/[a-z]/.test(password)) {
+        return "Password must contain at least one lowercase letter";
+    }
+    if (!/[A-Z]/.test(password)) {
+        return "Password must contain at least one uppercase letter";
+    }
+    if (!/\d/.test(password)) {
+        return "Password must contain at least one number";
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        return "Password must contain at least one special character";
+    }
+    return null;
+};
+const registerUser = async ({ firstName, lastName, email, password, confirmPassword, role, }) => {
     try {
         const existingUser = await userModel_1.userModel.findOne({ email });
         if (existingUser) {
-            throw new Error("User with this email already exists");
+            if (existingUser.isVerified) {
+                throw new Error("User with this email already exists");
+            }
+            const verificationToken = crypto_1.default.randomBytes(32).toString("hex");
+            existingUser.verificationToken = verificationToken;
+            await existingUser.save();
+            const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+            const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
+            await (0, emailService_1.sendVerificationEmail)(email, verificationUrl);
+            return {
+                message: "A new verification email has been sent. Please check your inbox.",
+            };
+        }
+        if (password !== confirmPassword) {
+            throw new Error("Passwords do not match");
+        }
+        const strengthError = validatePasswordStrength(password);
+        if (strengthError) {
+            throw new Error(strengthError);
         }
         const hashedPassword = await bcrypt_1.default.hash(password, 10);
+        const verificationToken = crypto_1.default.randomBytes(32).toString("hex");
         const user = await userModel_1.userModel.create({
             firstName,
             lastName,
             email,
             password: hashedPassword,
             role: role || "user",
+            isVerified: false,
+            verificationToken,
         });
-        // نجيب اليوزر تاني من غير الباسورد
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
+        await (0, emailService_1.sendVerificationEmail)(email, verificationUrl);
         const userWithoutPassword = await userModel_1.userModel
             .findById(user._id)
             .select("-password");
@@ -43,11 +86,13 @@ const loginUser = async ({ email, password }) => {
         if (!isPasswordValid) {
             throw new Error("Invalid email or password");
         }
+        if (!existingUser.isVerified) {
+            throw new Error("Please verify your email address before logging in");
+        }
         const token = jsonwebtoken_1.default.sign({ id: existingUser._id, role: existingUser.role }, process.env.JWT_SECRET || "", { expiresIn: "1h" });
         const userWithoutPassword = await userModel_1.userModel
             .findById(existingUser._id)
             .select("-password");
-        // return existingUser;
         return { message: "Login successful", user: userWithoutPassword, token };
     }
     catch (error) {
@@ -55,15 +100,69 @@ const loginUser = async ({ email, password }) => {
     }
 };
 exports.loginUser = loginUser;
-// Get the authenticated user's profile
-const getmebytoken = async (req, res) => {
+const verifyEmail = async (token) => {
     try {
-        const id = req.user.id;
-        const user = await userModel_1.userModel.findById(id).select("-password"); // Exclude the password field
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
+        if (!token) {
+            throw new Error("Verification token is required");
         }
-        res.status(200).json(user);
+        const user = await userModel_1.userModel.findOne({
+            verificationToken: token,
+        });
+        if (!user) {
+            throw new Error("Invalid or expired verification token");
+        }
+        user.isVerified = true;
+        user.verificationToken = undefined;
+        await user.save();
+        return {
+            message: "Email verified successfully. You can now log in.",
+        };
+    }
+    catch (error) {
+        throw new Error(error.message);
+    }
+};
+exports.verifyEmail = verifyEmail;
+// Get the authenticated user's profile
+const getProfile = async (userId) => {
+    try {
+        const user = await userModel_1.userModel.findById(userId).select("-password");
+        if (!user) {
+            throw new Error("User not found");
+        }
+        return user;
+    }
+    catch (error) {
+        throw new Error(error.message);
+    }
+};
+exports.getProfile = getProfile;
+// Update user profile (own data only)
+const updateProfile = async (userId, updateData) => {
+    try {
+        const user = await userModel_1.userModel
+            .findByIdAndUpdate(userId, updateData, {
+            new: true,
+            runValidators: true,
+        })
+            .select("-password");
+        if (!user) {
+            throw new Error("User not found");
+        }
+        return user;
+    }
+    catch (error) {
+        throw new Error(error.message);
+    }
+};
+exports.updateProfile = updateProfile;
+// Get me by token (legacy, used by AuthContext)
+const getmebytoken = async (userId) => {
+    try {
+        const user = await userModel_1.userModel.findById(userId).select("-password");
+        if (!user) {
+            throw new Error("User not found");
+        }
         return user;
     }
     catch (error) {
@@ -71,6 +170,55 @@ const getmebytoken = async (req, res) => {
     }
 };
 exports.getmebytoken = getmebytoken;
+// Update user
+const updateUser = async (userId, updateData) => {
+    try {
+        const user = await userModel_1.userModel
+            .findByIdAndUpdate(userId, updateData, {
+            new: true,
+            runValidators: true,
+        })
+            .select("-password");
+        if (!user) {
+            throw new Error("User not found");
+        }
+        return user;
+    }
+    catch (error) {
+        throw new Error(error.message);
+    }
+};
+exports.updateUser = updateUser;
+// Delete user
+const deleteUser = async (userId) => {
+    try {
+        const user = await userModel_1.userModel.findByIdAndDelete(userId);
+        if (!user) {
+            throw new Error("User not found");
+        }
+        return { message: "User deleted successfully" };
+    }
+    catch (error) {
+        throw new Error(error.message);
+    }
+};
+exports.deleteUser = deleteUser;
+// Toggle user active status
+const toggleUserActive = async (userId) => {
+    try {
+        const user = await userModel_1.userModel.findById(userId);
+        if (!user) {
+            throw new Error("User not found");
+        }
+        user.isActive = !user.isActive;
+        await user.save();
+        return { isActive: user.isActive };
+    }
+    catch (error) {
+        throw new Error(error.message);
+    }
+};
+exports.toggleUserActive = toggleUserActive;
 //Get All Users with Pagination, Search, Filter, Sort
 const getAllUsers = async (queryParams = {}) => {
     try {
@@ -86,6 +234,19 @@ const getAllUsers = async (queryParams = {}) => {
         }
         if (queryParams.role && ["user", "admin"].includes(queryParams.role)) {
             filter.role = queryParams.role;
+        }
+        if (queryParams.isActive !== undefined &&
+            queryParams.isActive !== "") {
+            filter.isActive =
+                queryParams.isActive === "true" || queryParams.isActive === true;
+        }
+        if (queryParams.startDate) {
+            filter.createdAt = filter.createdAt || {};
+            filter.createdAt.$gte = new Date(queryParams.startDate);
+        }
+        if (queryParams.endDate) {
+            filter.createdAt = filter.createdAt || {};
+            filter.createdAt.$lte = new Date(queryParams.endDate);
         }
         const allowedSortFields = [
             "createdAt",

@@ -1,12 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.seedInitialProducts = exports.getProductBrands = exports.getProductCategories = exports.getAllProducts = void 0;
+exports.seedInitialProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.getRelatedProducts = exports.getProductById = exports.getProductBrands = exports.getProductCategories = exports.getAllProducts = void 0;
 const productModel_1 = require("../models/productModel");
+const wishlistModel_1 = require("../models/wishlistModel");
+const brandService_1 = require("./brandService");
 const pagination_1 = require("../utils/pagination");
 const getAllProducts = async (queryParams = {}) => {
     const { page, limit, skip, sortBy, sortOrder } = (0, pagination_1.parsePaginationParams)(queryParams);
     const filter = {};
-    // Search filter across name, brand, description
     if (queryParams.search && queryParams.search.trim()) {
         const searchRegex = new RegExp(queryParams.search.trim(), "i");
         filter.$or = [
@@ -16,15 +17,12 @@ const getAllProducts = async (queryParams = {}) => {
             { category: searchRegex },
         ];
     }
-    // Category filter
     if (queryParams.category && queryParams.category !== "All") {
         filter.category = queryParams.category;
     }
-    // Brand filter
     if (queryParams.brand && queryParams.brand !== "All") {
         filter.brand = queryParams.brand;
     }
-    // Price filter
     if (queryParams.minPrice !== undefined ||
         queryParams.maxPrice !== undefined) {
         filter.price = {};
@@ -35,20 +33,46 @@ const getAllProducts = async (queryParams = {}) => {
             filter.price.$lte = Number(queryParams.maxPrice);
         }
     }
-    // In Stock filter
     if (queryParams.inStock === "true" || queryParams.inStock === true) {
         filter.stock = { $gt: 0 };
     }
-    // Allowed sort fields
+    if (queryParams.stockStatus === "lowstock") {
+        filter.stock = { $lte: 5, $gt: 0 };
+    }
+    else if (queryParams.stockStatus === "outofstock") {
+        filter.stock = { $lte: 0 };
+    }
     const allowedSortFields = ["price", "createdAt", "name", "stock", "brand"];
     const sortField = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
     const [products, totalItems] = await Promise.all([
         productModel_1.productModel
-            .find(filter)
-            .sort({ [sortField]: sortOrder })
-            .skip(skip)
-            .limit(limit)
-            .lean(),
+            .aggregate([
+            { $match: filter },
+            { $sort: { [sortField]: sortOrder } },
+            { $skip: skip },
+            { $limit: limit },
+            {
+                $lookup: {
+                    from: "reviews",
+                    localField: "_id",
+                    foreignField: "productId",
+                    as: "reviews",
+                },
+            },
+            {
+                $addFields: {
+                    averageRating: {
+                        $cond: {
+                            if: { $gt: [{ $size: "$reviews" }, 0] },
+                            then: { $avg: "$reviews.rating" },
+                            else: 0,
+                        },
+                    },
+                    totalReviews: { $size: "$reviews" },
+                },
+            },
+            { $project: { reviews: 0 } },
+        ]),
         productModel_1.productModel.countDocuments(filter),
     ]);
     return (0, pagination_1.buildPaginatedResponse)(products, totalItems, page, limit);
@@ -64,6 +88,61 @@ const getProductBrands = async () => {
     return brands;
 };
 exports.getProductBrands = getProductBrands;
+const getProductById = async (productId) => {
+    const product = await productModel_1.productModel.findById(productId).lean();
+    if (!product) {
+        throw new Error("Product not found");
+    }
+    return product;
+};
+exports.getProductById = getProductById;
+const getRelatedProducts = async (productId, limit = 4) => {
+    const product = await productModel_1.productModel.findById(productId).lean();
+    if (!product) {
+        throw new Error("Product not found");
+    }
+    const related = await productModel_1.productModel
+        .find({ _id: { $ne: productId }, category: product.category })
+        .limit(limit)
+        .lean();
+    return related;
+};
+exports.getRelatedProducts = getRelatedProducts;
+const createProduct = async (productData) => {
+    const data = { ...productData };
+    if (data.category)
+        data.category = (0, brandService_1.normalizeName)(data.category);
+    if (data.brand)
+        data.brand = (0, brandService_1.normalizeName)(data.brand);
+    const product = await productModel_1.productModel.create(data);
+    return product;
+};
+exports.createProduct = createProduct;
+const updateProduct = async (productId, productData) => {
+    const data = { ...productData };
+    if (data.category)
+        data.category = (0, brandService_1.normalizeName)(data.category);
+    if (data.brand)
+        data.brand = (0, brandService_1.normalizeName)(data.brand);
+    const product = await productModel_1.productModel.findByIdAndUpdate(productId, data, {
+        new: true,
+        runValidators: true,
+    });
+    if (!product) {
+        throw new Error("Product not found");
+    }
+    return product;
+};
+exports.updateProduct = updateProduct;
+const deleteProduct = async (productId) => {
+    const product = await productModel_1.productModel.findByIdAndDelete(productId);
+    if (!product) {
+        throw new Error("Product not found");
+    }
+    await wishlistModel_1.wishlistModel.updateMany({ "items.product": productId }, { $pull: { items: { product: productId } } });
+    return { message: "Product deleted successfully" };
+};
+exports.deleteProduct = deleteProduct;
 const seedInitialProducts = async () => {
     try {
         const products = [

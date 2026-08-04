@@ -188,8 +188,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 								<>
 									<Tooltip title="Shopping Cart">
 										<IconButton
-											component={Link}
-											to="/cart"
+											onClick={() => navigate("/cart")}
 											color="inherit"
 											size="small"
 											sx={{
@@ -197,7 +196,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 												...(navActive("/cart")
 													? luxeNavLinkActive(true, mode)
 													: {}),
-											}}
+											} as any}
 										>
 											<Badge
 												badgeContent={cartItemsCount}
