@@ -33,7 +33,7 @@ const forgotPassword = async (email) => {
         // Send email with the raw token (not hashed)
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
         const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
-        await (0, emailService_1.sendPasswordResetEmail)(email, resetUrl);
+        (0, emailService_1.sendPasswordResetEmail)(email, resetUrl).catch((err) => console.error("❌ Error sending password reset email:", err));
         return genericResponse;
     }
     catch (error) {

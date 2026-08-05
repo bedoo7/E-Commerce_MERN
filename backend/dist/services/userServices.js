@@ -40,7 +40,7 @@ const registerUser = async ({ firstName, lastName, email, password, confirmPassw
             await existingUser.save();
             const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
             const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
-            await (0, emailService_1.sendVerificationEmail)(email, verificationUrl);
+            (0, emailService_1.sendVerificationEmail)(email, verificationUrl).catch((err) => console.error("❌ Error sending verification email:", err));
             return {
                 message: "A new verification email has been sent. Please check your inbox.",
             };
@@ -65,7 +65,7 @@ const registerUser = async ({ firstName, lastName, email, password, confirmPassw
         });
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
         const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
-        await (0, emailService_1.sendVerificationEmail)(email, verificationUrl);
+        (0, emailService_1.sendVerificationEmail)(email, verificationUrl).catch((err) => console.error("❌ Error sending verification email:", err));
         const userWithoutPassword = await userModel_1.userModel
             .findById(user._id)
             .select("-password");

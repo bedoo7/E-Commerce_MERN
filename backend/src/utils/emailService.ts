@@ -16,12 +16,24 @@ const createTransporter = () => {
 	}
 
 	const transporter = nodemailer.createTransport({
-		service: "gmail",
+		host: "smtp.gmail.com",
+		port: Number(process.env.EMAIL_PORT) || 587,
+		secure: false,
 		auth: {
 			user: emailUser,
 			pass: emailPass,
 		},
+		connectionTimeout: 10000,
+		socketTimeout: 10000,
+		tls: {
+			rejectUnauthorized: false,
+		},
 	});
+
+	transporter.on("token", () => {
+		console.log("XOAUTH2 authentication token generated");
+	});
+
 	return transporter;
 };
 
@@ -51,11 +63,13 @@ export const sendPasswordResetEmail = async (
 			html: htmlContent,
 		};
 
-		await transporter.sendMail(mailOptions);
-		console.log(`✅ Password reset email sent to ${email}`);
+		transporter.sendMail(mailOptions).then(() => {
+			console.log(`✅ Password reset email sent to ${email}`);
+		}).catch((error) => {
+			console.error("❌ Error sending password reset email:", error);
+		});
 	} catch (error) {
 		console.error("❌ Error sending password reset email:", error);
-		// Don't throw - we still return generic response to user
 	}
 };
 
@@ -84,10 +98,12 @@ export const sendVerificationEmail = async (
 			html: htmlContent,
 		};
 
-		await transporter.sendMail(mailOptions);
-		console.log(`✅ Verification email sent to ${email}`);
+		transporter.sendMail(mailOptions).then(() => {
+			console.log(`✅ Verification email sent to ${email}`);
+		}).catch((error) => {
+			console.error("❌ Error sending verification email:", error);
+		});
 	} catch (error) {
 		console.error("❌ Error sending verification email:", error);
-		throw error;
 	}
 };

@@ -36,7 +36,9 @@ export const forgotPassword = async (email: string) => {
 		const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 		const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
-		await sendPasswordResetEmail(email, resetUrl);
+		sendPasswordResetEmail(email, resetUrl).catch((err) =>
+			console.error("❌ Error sending password reset email:", err),
+		);
 
 		return genericResponse;
 	} catch (error) {
