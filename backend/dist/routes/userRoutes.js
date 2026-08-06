@@ -25,6 +25,23 @@ router.post("/register", async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 });
+// Admin: Create user directly (no email verification)
+router.post("/admin/create", auth_middleware_1.authenticate, (0, authorize_middleware_1.authorize)("admin"), async (req, res) => {
+    try {
+        const { firstName, lastName, email, password, role } = req.body;
+        const user = await (0, userServices_1.createUserByAdmin)({
+            firstName,
+            lastName,
+            email,
+            password,
+            role: role || "user",
+        });
+        res.status(201).json(user);
+    }
+    catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+});
 router.post("/login", async (req, res) => {
     const { email, password } = req.body;
     try {

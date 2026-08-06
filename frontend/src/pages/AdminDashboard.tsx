@@ -643,18 +643,12 @@ export const AdminDashboard: React.FC = () => {
 
 	// Save user (create/edit)
 	const saveUserMutation = useMutation({
-		mutationFn: async (data: {
-			firstName: string;
-			lastName: string;
-			email: string;
-			password?: string;
-			role: string;
-		}) => {
+		mutationFn: async (data: Record<string, any>) => {
 			if (editingUser?._id) {
 				const res = await api.put(`/user/${editingUser._id}`, data);
 				return res.data;
 			} else {
-				const res = await api.post("/user/register", data);
+				const res = await api.post("/user/admin/create", data);
 				return res.data;
 			}
 		},
@@ -865,10 +859,10 @@ export const AdminDashboard: React.FC = () => {
 		}
 		const data = editingUser
 			? { ...userForm }
-			: { ...userForm, password: userForm.password };
+			: { ...userForm, password: userForm.password, confirmPassword: userForm.password };
 		saveUserMutation.mutate(
 			userForm.password
-				? { ...userForm, password: userForm.password }
+				? { ...userForm, password: userForm.password, confirmPassword: userForm.password }
 				: {
 						firstName: userForm.firstName,
 						lastName: userForm.lastName,

@@ -6,6 +6,7 @@ import {
 	updateProfile,
 	loginUser,
 	registerUser,
+	createUserByAdmin,
 	updateUser,
 	deleteUser,
 	deleteOwnAccount,
@@ -34,6 +35,28 @@ router.post("/register", async (req, res) => {
 		res.status(400).json({ message: error.message });
 	}
 });
+
+// Admin: Create user directly (no email verification)
+router.post(
+	"/admin/create",
+	authenticate,
+	authorize("admin"),
+	async (req: any, res) => {
+		try {
+			const { firstName, lastName, email, password, role } = req.body;
+			const user = await createUserByAdmin({
+				firstName,
+				lastName,
+				email,
+				password,
+				role: role || "user",
+			});
+			res.status(201).json(user);
+		} catch (error: any) {
+			res.status(400).json({ message: error.message });
+		}
+	},
+);
 
 router.post("/login", async (req, res) => {
 	const { email, password } = req.body;

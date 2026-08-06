@@ -239,7 +239,51 @@ export const deleteOwnAccount = async (userId: string) => {
 	}
 };
 
-// Get me by token (legacy, used by AuthContext)
+// Create user by admin (no email verification, account is active immediately)
+export const createUserByAdmin = async ({
+	firstName,
+	lastName,
+	email,
+	password,
+	role,
+}: {
+	firstName: string;
+	lastName: string;
+	email: string;
+	password: string;
+	role: "user" | "admin";
+}) => {
+	try {
+		const existingUser = await userModel.findOne({ email });
+		if (existingUser) {
+			throw new Error("User with this email already exists");
+		}
+
+		if (password !== password) {
+			throw new Error("Passwords do not match");
+		}
+
+		const hashedPassword = await bcrypt.hash(password, 10);
+
+		const user = await userModel.create({
+			firstName,
+			lastName,
+			email,
+			password: hashedPassword,
+			role: role || "user",
+			isVerified: true,
+			verificationToken: undefined,
+		});
+
+		const userWithoutPassword = await userModel
+			.findById(user._id)
+			.select("-password");
+
+		return userWithoutPassword;
+	} catch (error: any) {
+		throw new Error(error.message);
+	}
+};
 export const getmebytoken = async (userId: string) => {
 	try {
 		const user = await userModel.findById(userId).select("-password");
