@@ -33,7 +33,7 @@ export const forgotPassword = async (email: string) => {
 		await user.save();
 
 		// Send email with the raw token (not hashed)
-		const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+		const frontendUrl = process.env.FRONTEND_URL || "https://luxeestore.vercel.app";
 		const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
 		sendPasswordResetEmail(email, resetUrl).catch((err) =>

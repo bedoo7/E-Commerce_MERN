@@ -31,7 +31,7 @@ const forgotPassword = async (email) => {
         user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
         await user.save();
         // Send email with the raw token (not hashed)
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const frontendUrl = process.env.FRONTEND_URL || "https://luxeestore.vercel.app";
         const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
         (0, emailService_1.sendPasswordResetEmail)(email, resetUrl).catch((err) => console.error("❌ Error sending password reset email:", err));
         return genericResponse;

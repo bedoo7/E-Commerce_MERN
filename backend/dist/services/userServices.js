@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllUsers = exports.toggleUserActive = exports.deleteUser = exports.updateUser = exports.getmebytoken = exports.updateProfile = exports.getProfile = exports.verifyEmail = exports.loginUser = exports.registerUser = void 0;
+exports.getAllUsers = exports.toggleUserActive = exports.deleteUser = exports.updateUser = exports.getmebytoken = exports.deleteOwnAccount = exports.updateProfile = exports.getProfile = exports.verifyEmail = exports.loginUser = exports.registerUser = void 0;
 const userModel_1 = require("../models/userModel");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -38,7 +38,7 @@ const registerUser = async ({ firstName, lastName, email, password, confirmPassw
             const verificationToken = crypto_1.default.randomBytes(32).toString("hex");
             existingUser.verificationToken = verificationToken;
             await existingUser.save();
-            const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+            const frontendUrl = process.env.FRONTEND_URL || "https://luxeestore.vercel.app";
             const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
             (0, emailService_1.sendVerificationEmail)(email, verificationUrl).catch((err) => console.error("❌ Error sending verification email:", err));
             return {
@@ -156,6 +156,20 @@ const updateProfile = async (userId, updateData) => {
     }
 };
 exports.updateProfile = updateProfile;
+// Delete own account
+const deleteOwnAccount = async (userId) => {
+    try {
+        const user = await userModel_1.userModel.findByIdAndDelete(userId);
+        if (!user) {
+            throw new Error("User not found");
+        }
+        return { message: "Account deleted successfully" };
+    }
+    catch (error) {
+        throw new Error(error.message);
+    }
+};
+exports.deleteOwnAccount = deleteOwnAccount;
 // Get me by token (legacy, used by AuthContext)
 const getmebytoken = async (userId) => {
     try {

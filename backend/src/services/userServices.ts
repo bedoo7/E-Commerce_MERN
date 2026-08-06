@@ -66,7 +66,7 @@ export const registerUser = async ({
 			const verificationToken = crypto.randomBytes(32).toString("hex");
 			existingUser.verificationToken = verificationToken;
 			await existingUser.save();
-			const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+			const frontendUrl = process.env.FRONTEND_URL || "https://luxeestore.vercel.app";
 			const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
 			sendVerificationEmail(email, verificationUrl).catch((err) =>
 				console.error("❌ Error sending verification email:", err),
@@ -221,6 +221,19 @@ export const updateProfile = async (
 			throw new Error("User not found");
 		}
 		return user;
+	} catch (error: any) {
+		throw new Error(error.message);
+	}
+};
+
+// Delete own account
+export const deleteOwnAccount = async (userId: string) => {
+	try {
+		const user = await userModel.findByIdAndDelete(userId);
+		if (!user) {
+			throw new Error("User not found");
+		}
+		return { message: "Account deleted successfully" };
 	} catch (error: any) {
 		throw new Error(error.message);
 	}

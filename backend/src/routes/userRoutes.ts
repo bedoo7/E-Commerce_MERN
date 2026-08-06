@@ -8,6 +8,7 @@ import {
 	registerUser,
 	updateUser,
 	deleteUser,
+	deleteOwnAccount,
 	toggleUserActive,
 	verifyEmail,
 } from "../services/userServices";
@@ -86,6 +87,16 @@ router.put("/profile", authenticate, async (req: any, res) => {
 		});
 		const user = await updateProfile(req.user.id, updateData);
 		res.status(200).json(user);
+	} catch (error: any) {
+		res.status(400).json({ message: error.message });
+	}
+});
+
+// Delete own account
+router.delete("/profile", authenticate, async (req: any, res) => {
+	try {
+		const result = await deleteOwnAccount(req.user.id);
+		res.status(200).json(result);
 	} catch (error: any) {
 		res.status(400).json({ message: error.message });
 	}

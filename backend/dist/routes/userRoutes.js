@@ -82,6 +82,16 @@ router.put("/profile", auth_middleware_1.authenticate, async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 });
+// Delete own account
+router.delete("/profile", auth_middleware_1.authenticate, async (req, res) => {
+    try {
+        const result = await (0, userServices_1.deleteOwnAccount)(req.user.id);
+        res.status(200).json(result);
+    }
+    catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+});
 router.get("/admin", auth_middleware_1.authenticate, (0, authorize_middleware_1.authorize)("admin"), (req, res) => {
     try {
         res.json({

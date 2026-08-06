@@ -14,8 +14,13 @@ import {
 	Paper,
 	InputAdornment,
 	Chip,
+	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogActions,
+	Alert,
 } from "@mui/material";
-import { PersonOutline, Phone, LocationOn } from "@mui/icons-material";
+import { PersonOutline, Phone, LocationOn, DeleteOutline } from "@mui/icons-material";
 import { api } from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
@@ -28,6 +33,8 @@ export const Profile: React.FC = () => {
 	const [lastName, setLastName] = useState(user?.lastName || "");
 	const [phone, setPhone] = useState(user?.phone || "");
 	const [address, setAddress] = useState(user?.address || "");
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
 	const { data: profile, isLoading } = useQuery({
 		queryKey: ["profile"],
@@ -55,6 +62,20 @@ export const Profile: React.FC = () => {
 		},
 		onError: (err: any) => {
 			toast.error(err.message || "Failed to update profile");
+		},
+	});
+
+	const deleteMutation = useMutation({
+		mutationFn: async () => {
+			await api.delete("/user/profile");
+		},
+		onSuccess: () => {
+			queryClient.clear();
+			toast.success("Account deleted successfully");
+			window.location.href = "/";
+		},
+		onError: (err: any) => {
+			toast.error(err.message || "Failed to delete account");
 		},
 	});
 
@@ -258,10 +279,69 @@ export const Profile: React.FC = () => {
 									{updateMutation.isPending ? "Saving..." : "Save Changes"}
 								</Button>
 							</Box>
+
+							<Divider sx={{ my: 4 }} />
+
+							<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+								<Box>
+									<Typography variant="subtitle1" fontWeight={700} color="error.main">
+										Delete Account
+									</Typography>
+									<Typography variant="body2" color="text.secondary">
+										Once you delete your account, there is no going back. Please be certain.
+									</Typography>
+								</Box>
+								<Button
+									variant="outlined"
+									color="error"
+									startIcon={<DeleteOutline />}
+									onClick={() => setDeleteDialogOpen(true)}
+								>
+									Delete Account
+								</Button>
+							</Box>
 						</CardContent>
 					</Card>
 				</Grid>
 			</Grid>
+
+			{/* Delete Account Confirmation Dialog */}
+			<Dialog
+				open={deleteDialogOpen}
+				onClose={() => setDeleteDialogOpen(false)}
+				maxWidth="xs"
+				fullWidth
+			>
+				<DialogTitle sx={{ fontWeight: 800, color: "error.main" }}>
+					Delete Account
+				</DialogTitle>
+				<DialogContent>
+					<Alert severity="error" sx={{ mb: 2 }}>
+						This action is irreversible. All your data will be permanently deleted.
+					</Alert>
+					<Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+						Please type <strong>DELETE</strong> to confirm:
+					</Typography>
+					<TextField
+						fullWidth
+						size="small"
+						placeholder='Type "DELETE" to confirm'
+						value={deleteConfirmText}
+						onChange={(e) => setDeleteConfirmText(e.target.value)}
+					/>
+				</DialogContent>
+				<DialogActions sx={{ px: 3, pb: 2 }}>
+					<Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+					<Button
+						variant="contained"
+						color="error"
+						onClick={() => deleteMutation.mutate()}
+						disabled={deleteConfirmText !== "DELETE" || deleteMutation.isPending}
+					>
+						{deleteMutation.isPending ? "Deleting..." : "Delete Account"}
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</Box>
 	);
 };
