@@ -57,6 +57,7 @@ import PercentIcon from "@mui/icons-material/Percent";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import SpeedIcon from "@mui/icons-material/Speed";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { AnalyticsCharts } from "../components/analytics/AnalyticsCharts";
 import { api } from "../api/axios";
 import {
@@ -232,6 +233,42 @@ export const AdminDashboard: React.FC = () => {
 		stock: 0,
 		imageUrl: "",
 	});
+	const [imagePreview, setImagePreview] = useState<string>("");
+
+	// Image upload mutation
+	const uploadImageMutation = useMutation({
+		mutationFn: async (file: File) => {
+			const formData = new FormData();
+			formData.append("image", file);
+			const res = await api.post("/upload", formData, {
+				headers: { "Content-Type": "multipart/form-data" },
+			});
+			return res.data;
+		},
+		onSuccess: (data) => {
+			setProductForm({ ...productForm, imageUrl: data.url });
+			setImagePreview(data.url);
+			toast.success("Image uploaded successfully!");
+		},
+		onError: (err: any) => {
+			toast.error(err.message || "Failed to upload image");
+		},
+	});
+
+	const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (file) {
+			if (!file.type.startsWith("image/")) {
+				toast.error("Please select an image file");
+				return;
+			}
+			if (file.size > 5 * 1024 * 1024) {
+				toast.error("Image size must be less than 5MB");
+				return;
+			}
+			uploadImageMutation.mutate(file);
+		}
+	};
 
 	// Order management state
 	const [statusDialogOpen, setStatusDialogOpen] = useState(false);
@@ -790,6 +827,7 @@ export const AdminDashboard: React.FC = () => {
 			stock: 0,
 			imageUrl: "",
 		});
+		setImagePreview("");
 		setEditingProduct(null);
 	};
 
@@ -815,6 +853,7 @@ export const AdminDashboard: React.FC = () => {
 			stock: product.stock,
 			imageUrl: product.imageUrl,
 		});
+		setImagePreview(product.imageUrl || "");
 		setProductDialogOpen(true);
 	};
 
@@ -3298,15 +3337,66 @@ export const AdminDashboard: React.FC = () => {
 								/>
 							</Grid>
 						</Grid>
-						<TextField
-							fullWidth
-							label="Image URL"
-							value={productForm.imageUrl}
-							onChange={(e) =>
-								setProductForm({ ...productForm, imageUrl: e.target.value })
-							}
-							size="small"
-						/>
+						<Box>
+							<Typography variant="body2" fontWeight={600} gutterBottom>
+								Product Image
+							</Typography>
+							<Stack direction="row" spacing={2} alignItems="flex-start">
+								<Box
+									sx={{
+										width: 120,
+										height: 120,
+										borderRadius: 2,
+										border: "2px dashed",
+										borderColor: "divider",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										overflow: "hidden",
+										bgcolor: "background.default",
+									}}
+								>
+									{imagePreview || productForm.imageUrl ? (
+										<Box
+											component="img"
+											src={imagePreview || productForm.imageUrl}
+											sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+										/>
+									) : (
+										<Typography variant="caption" color="text.secondary">
+											No image
+										</Typography>
+									)}
+								</Box>
+								<Stack spacing={1} flex={1}>
+									<Button
+										component="label"
+										variant="outlined"
+										size="small"
+										startIcon={<CloudUploadIcon />}
+										disabled={uploadImageMutation.isPending}
+									>
+										{uploadImageMutation.isPending ? "Uploading..." : "Upload Image"}
+										<input
+											type="file"
+											hidden
+											accept="image/*"
+											onChange={handleImageUpload}
+										/>
+									</Button>
+									<TextField
+										fullWidth
+										label="Or paste Image URL"
+										size="small"
+										value={productForm.imageUrl}
+										onChange={(e) => {
+											setProductForm({ ...productForm, imageUrl: e.target.value });
+											setImagePreview("");
+										}}
+									/>
+								</Stack>
+							</Stack>
+						</Box>
 					</Stack>
 				</DialogContent>
 				<DialogActions sx={{ p: 3 }}>
