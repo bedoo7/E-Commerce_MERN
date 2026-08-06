@@ -428,3 +428,36 @@ export const getAllUsers = async (
 		throw new Error(error.message);
 	}
 };
+
+export const changePassword = async (
+	userId: string,
+	currentPassword: string,
+	newPassword: string,
+) => {
+	try {
+		const user = await userModel.findById(userId);
+		if (!user) {
+			throw new Error("User not found");
+		}
+
+		const isCurrentPasswordValid = await bcrypt.compare(
+			currentPassword,
+			user.password,
+		);
+		if (!isCurrentPasswordValid) {
+			throw new Error("Current password is incorrect");
+		}
+
+		if (newPassword.length < 6) {
+			throw new Error("Password must be at least 6 characters long");
+		}
+
+		const hashedPassword = await bcrypt.hash(newPassword, 10);
+		user.password = hashedPassword;
+		await user.save();
+
+		return { message: "Password changed successfully" };
+	} catch (error: any) {
+		throw new Error(error.message);
+	}
+};

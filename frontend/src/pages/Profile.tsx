@@ -20,7 +20,7 @@ import {
 	DialogActions,
 	Alert,
 } from "@mui/material";
-import { PersonOutline, Phone, LocationOn, DeleteOutline } from "@mui/icons-material";
+import { PersonOutline, Phone, LocationOn, DeleteOutline, LockOutlined } from "@mui/icons-material";
 import { api } from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
@@ -35,6 +35,10 @@ export const Profile: React.FC = () => {
 	const [address, setAddress] = useState(user?.address || "");
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [deleteConfirmText, setDeleteConfirmText] = useState("");
+	const [currentPassword, setCurrentPassword] = useState("");
+	const [newPassword, setNewPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
+	const [showPasswords, setShowPasswords] = useState(false);
 
 	const { data: profile, isLoading } = useQuery({
 		queryKey: ["profile"],
@@ -79,6 +83,22 @@ export const Profile: React.FC = () => {
 		},
 	});
 
+	const changePasswordMutation = useMutation({
+		mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+			const res = await api.put("/user/change-password", data);
+			return res.data;
+		},
+		onSuccess: () => {
+			toast.success("Password changed successfully!");
+			setCurrentPassword("");
+			setNewPassword("");
+			setConfirmPassword("");
+		},
+		onError: (err: any) => {
+			toast.error(err.message || "Failed to change password");
+		},
+	});
+
 	React.useEffect(() => {
 		if (profile) {
 			setFirstName(profile.firstName || "");
@@ -94,6 +114,25 @@ export const Profile: React.FC = () => {
 			lastName,
 			phone,
 			address,
+		});
+	};
+
+	const handleChangePassword = () => {
+		if (!currentPassword || !newPassword || !confirmPassword) {
+			toast.error("Please fill in all password fields");
+			return;
+		}
+		if (newPassword !== confirmPassword) {
+			toast.error("New passwords do not match");
+			return;
+		}
+		if (newPassword.length < 6) {
+			toast.error("Password must be at least 6 characters");
+			return;
+		}
+		changePasswordMutation.mutate({
+			currentPassword,
+			newPassword,
 		});
 	};
 
@@ -279,6 +318,72 @@ export const Profile: React.FC = () => {
 									{updateMutation.isPending ? "Saving..." : "Save Changes"}
 								</Button>
 							</Box>
+
+							<Divider sx={{ my: 4 }} />
+
+							<Typography variant="h6" fontWeight={700} gutterBottom>
+								Change Password
+							</Typography>
+							<Grid container spacing={2}>
+								<Grid item xs={12}>
+									<TextField
+										fullWidth
+										label="Current Password"
+										type={showPasswords ? "text" : "password"}
+										value={currentPassword}
+										onChange={(e) => setCurrentPassword(e.target.value)}
+										InputProps={{
+											startAdornment: (
+												<InputAdornment position="start">
+													<LockOutlined sx={{ color: "text.secondary" }} />
+												</InputAdornment>
+											),
+										}}
+									/>
+								</Grid>
+								<Grid item xs={12} sm={6}>
+									<TextField
+										fullWidth
+										label="New Password"
+										type={showPasswords ? "text" : "password"}
+										value={newPassword}
+										onChange={(e) => setNewPassword(e.target.value)}
+									/>
+								</Grid>
+								<Grid item xs={12} sm={6}>
+									<TextField
+										fullWidth
+										label="Confirm New Password"
+										type={showPasswords ? "text" : "password"}
+										value={confirmPassword}
+										onChange={(e) => setConfirmPassword(e.target.value)}
+									/>
+								</Grid>
+								<Grid item xs={12}>
+									<Stack direction="row" spacing={2}>
+										<Button
+											variant="contained"
+											onClick={handleChangePassword}
+											disabled={changePasswordMutation.isPending}
+											sx={{
+												background: "linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)",
+											}}
+										>
+											{changePasswordMutation.isPending ? "Changing..." : "Change Password"}
+										</Button>
+										<Button
+											variant="text"
+											onClick={() => {
+												setCurrentPassword("");
+												setNewPassword("");
+												setConfirmPassword("");
+											}}
+										>
+											Clear
+										</Button>
+									</Stack>
+								</Grid>
+							</Grid>
 
 							<Divider sx={{ my: 4 }} />
 

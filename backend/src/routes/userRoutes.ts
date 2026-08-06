@@ -12,6 +12,7 @@ import {
 	deleteOwnAccount,
 	toggleUserActive,
 	verifyEmail,
+	changePassword,
 } from "../services/userServices";
 import { authenticate } from "../middleware/auth.middleware";
 import { authorize } from "../middleware/authorize.middleware";
@@ -119,6 +120,20 @@ router.put("/profile", authenticate, async (req: any, res) => {
 router.delete("/profile", authenticate, async (req: any, res) => {
 	try {
 		const result = await deleteOwnAccount(req.user.id);
+		res.status(200).json(result);
+	} catch (error: any) {
+		res.status(400).json({ message: error.message });
+	}
+});
+
+// Change own password
+router.put("/change-password", authenticate, async (req: any, res) => {
+	try {
+		const { currentPassword, newPassword } = req.body;
+		if (!currentPassword || !newPassword) {
+			return res.status(400).json({ message: "Current password and new password are required" });
+		}
+		const result = await changePassword(req.user.id, currentPassword, newPassword);
 		res.status(200).json(result);
 	} catch (error: any) {
 		res.status(400).json({ message: error.message });
