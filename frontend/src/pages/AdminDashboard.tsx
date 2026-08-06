@@ -1980,52 +1980,44 @@ export const AdminDashboard: React.FC = () => {
 						))}
 					</Grid>
 
-					{/* Revenue Line Chart */}
-					<Grid container spacing={3} mb={4}>
-						<Grid item xs={12} md={8}>
-							<AnalyticsCharts
-								data={(analytics.charts?.dailyRevenue || []).slice(-14)}
-								title="Daily Revenue Trend"
-								type="line"
-								color="#4f46e5"
-							/>
-						</Grid>
-						<Grid item xs={12} md={4}>
-							<AnalyticsCharts
-								data={[
-									{
-										label: "Completed",
-										value: analytics.orders?.delivered || 0,
-										color: "#10b981",
-									},
-									{
-										label: "Shipped",
-										value: analytics.orders?.shipped || 0,
-										color: "#8b5cf6",
-									},
-									{
-										label: "Processing",
-										value: analytics.orders?.processing || 0,
-										color: "#3b82f6",
-									},
-									{
-										label: "Pending",
-										value: analytics.orders?.pending || 0,
-										color: "#f59e0b",
-									},
-									{
-										label: "Cancelled",
-										value: analytics.orders?.cancelled || 0,
-										color: "#ef4444",
-									},
-								]}
-								title="Order Status Distribution"
-								type="donut"
-							/>
-						</Grid>
+				{/* Order Status Distribution */}
+				<Grid container spacing={3} mb={4}>
+					<Grid item xs={12} md={4}>
+						<AnalyticsCharts
+							data={[
+								{
+									label: "Completed",
+									value: analytics.orders?.delivered || 0,
+									color: "#10b981",
+								},
+								{
+									label: "Shipped",
+									value: analytics.orders?.shipped || 0,
+									color: "#8b5cf6",
+								},
+								{
+									label: "Processing",
+									value: analytics.orders?.processing || 0,
+									color: "#3b82f6",
+								},
+								{
+									label: "Pending",
+									value: analytics.orders?.pending || 0,
+									color: "#f59e0b",
+								},
+								{
+									label: "Cancelled",
+									value: analytics.orders?.cancelled || 0,
+									color: "#ef4444",
+								},
+							]}
+							title="Order Status Distribution"
+							type="donut"
+						/>
 					</Grid>
-				</Box>
-			)}
+				</Grid>
+			</Box>
+		)}
 
 			{/* Dashboard Stats Cards */}
 			<Grid container spacing={3} mb={4}>
