@@ -1,12 +1,12 @@
-import { Resend } from "resend";
+import sgMail from "@sendgrid/mail";
 import {
 	generatePasswordResetEmailHTML,
 	generateVerificationEmailHTML,
 } from "./emailTemplates";
 
-// TODO: Add RESEND_API_KEY to Railway Environment Variables
-// Get your API key from https://resend.com after creating a free account
-const resend = new Resend(process.env.RESEND_API_KEY);
+// TODO: Add SENDGRID_API_KEY to Railway Environment Variables
+// Get your API key from https://app.sendgrid.com/settings/api-keys
+sgMail.setApiKey(process.env.SENDGRID_API_KEY as string);
 
 export const sendPasswordResetEmail = async (
 	email: string,
@@ -15,9 +15,9 @@ export const sendPasswordResetEmail = async (
 	try {
 		const htmlContent = generatePasswordResetEmailHTML(resetUrl);
 
-		await resend.emails.send({
-			from: "onboarding@resend.dev",
+		await sgMail.send({
 			to: email,
+			from: "abdelrahmanhassan3190@gmail.com",
 			subject: "Reset Your Luxe Store Password",
 			html: htmlContent,
 		});
@@ -35,9 +35,9 @@ export const sendVerificationEmail = async (
 	try {
 		const htmlContent = generateVerificationEmailHTML(verificationUrl);
 
-		await resend.emails.send({
-			from: "onboarding@resend.dev",
+		await sgMail.send({
 			to: email,
+			from: "abdelrahmanhassan3190@gmail.com",
 			subject: "Verify Your Luxe Store Email Address",
 			html: htmlContent,
 		});
